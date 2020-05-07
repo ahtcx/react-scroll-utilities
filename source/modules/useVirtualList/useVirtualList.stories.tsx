@@ -5,7 +5,8 @@ import { useVirtualList } from "./useVirtualList";
 export default { title: "useVirtualList" };
 
 export const withText = () => {
-	const items = Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index));
+	const items = Array.from({ length: 1000 }, (_, index) => index);
+	// const items = Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index));
 
 	const [renderedItems, { getContainerProps, getItemProps }] = useVirtualList(items);
 

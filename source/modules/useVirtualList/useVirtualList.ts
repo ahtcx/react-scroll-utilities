@@ -12,10 +12,11 @@ export interface VirtualListOptions {
 
 export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVERSCAN }: VirtualListOptions = {}) => {
 	const [scrollTop, setScrollTop] = useState(0);
-	const [averageHeight, setAverageHeight] = useState(10);
+	const [averageHeight, setAverageHeight] = useState(38);
 
 	const containerElementRef = useRef<HTMLDivElement>(null);
 	const containerElement = containerElementRef.current;
+	const containerElementHeight = containerElement?.clientHeight ?? 250;
 
 	const [itemElementHeights, setItemElementHeights] = useState<readonly (number | undefined)[]>(
 		Array.from({ length: items.length })
@@ -23,7 +24,7 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 
 	const scrollHeight =
 		itemElementHeights.reduce(
-			(itemElementHeight, currentValue) => (currentValue ?? 0) + (itemElementHeight ?? averageHeight),
+			(currentScrollHeight, _, index) => (currentScrollHeight ?? 0) + (itemElementHeights[index] ?? averageHeight),
 			0
 		) ?? 0;
 
@@ -43,7 +44,7 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 	let offsetTop = startOffsetTop;
 	let endIndex = startIndex;
 	itemElementHeights.slice(startIndex).some((itemElementHeight, index) => {
-		if (containerElement && offsetTop >= scrollTop + containerElement.clientHeight) {
+		if (offsetTop >= scrollTop + containerElementHeight) {
 			return true;
 		}
 
@@ -67,7 +68,7 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 			return;
 		}
 
-		setItemElementHeights([...containerElement.children].map(({ clientHeight }) => clientHeight));
+		// setItemElementHeights([...containerElement.children].map(({ clientHeight }) => clientHeight));
 	}, [containerElement]);
 
 	const getContainerProps = (props: ComponentProps<"div"> = {}): ComponentProps<"div"> => ({
@@ -96,6 +97,7 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 
 		return {
 			...props,
+			key: index,
 			style,
 		};
 	};

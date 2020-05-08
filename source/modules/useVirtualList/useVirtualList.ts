@@ -1,10 +1,10 @@
 import type { ComponentProps } from "react";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { tuple } from "../../utilities/tuple";
 
-const DEFAULT_OVERSCAN = 1;
+const DEFAULT_OVERSCAN = 0;
 
 export interface VirtualListOptions {
 	readonly overscan?: number;
@@ -12,7 +12,7 @@ export interface VirtualListOptions {
 
 export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVERSCAN }: VirtualListOptions = {}) => {
 	const [scrollTop, setScrollTop] = useState(0);
-	const [averageHeight, setAverageHeight] = useState(38);
+	const [estimatedHeight, setAverageHeight] = useState(38);
 
 	const containerElementRef = useRef<HTMLDivElement>(null);
 	const containerElement = containerElementRef.current;
@@ -22,54 +22,30 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 		Array.from({ length: items.length })
 	);
 
-	const scrollHeight =
-		itemElementHeights.reduce(
-			(currentScrollHeight, _, index) => (currentScrollHeight ?? 0) + (itemElementHeights[index] ?? averageHeight),
-			0
-		) ?? 0;
-
-	//
-
 	let startOffsetTop = 0;
-	let startIndex = 0;
-	itemElementHeights.some((itemElementHeight, index) => {
-		if (startOffsetTop > scrollTop) {
-			return true;
+	let startIndex: number | undefined;
+
+	let endOffsetTop = 0;
+	let endIndex: number | undefined;
+
+	let currentOffsetTop = 0;
+	let currentIndex = 0;
+
+	itemElementHeights.forEach((itemElementHeight, index) => {
+		if (typeof startIndex === "undefined" && currentOffsetTop > scrollTop - overscan) {
+			startOffsetTop = currentOffsetTop;
+			startIndex = currentIndex;
 		}
 
-		startOffsetTop += itemElementHeight ?? averageHeight;
-		startIndex = index;
+		if (typeof endIndex === "undefined" && currentOffsetTop >= scrollTop + containerElementHeight - overscan) {
+			endOffsetTop = currentOffsetTop;
+			endIndex = index;
+		}
+
+		currentOffsetTop += itemElementHeight ?? estimatedHeight;
+		currentIndex = index;
 	});
-
-	let offsetTop = startOffsetTop;
-	let endIndex = startIndex;
-	itemElementHeights.slice(startIndex).some((itemElementHeight, index) => {
-		if (offsetTop >= scrollTop + containerElementHeight) {
-			return true;
-		}
-
-		offsetTop += itemElementHeight ?? averageHeight;
-		endIndex = startIndex + index;
-	});
-	endIndex += 2;
-
-	//
-
-	useLayoutEffect(() => {
-		if (!containerElement) {
-			return;
-		}
-
-		containerElement.scrollTop = scrollTop;
-	}, [containerElement, scrollTop]);
-
-	useLayoutEffect(() => {
-		if (!containerElement) {
-			return;
-		}
-
-		// setItemElementHeights([...containerElement.children].map(({ clientHeight }) => 38));
-	}, [containerElement]);
+	const scrollHeight = currentOffsetTop;
 
 	const getContainerProps = (props: ComponentProps<"div"> = {}): ComponentProps<"div"> => ({
 		ref: containerElementRef,
@@ -77,6 +53,7 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 		style: {
 			...props.style,
 			overflowY: "auto",
+			willChange: "transform",
 		},
 	});
 
@@ -85,14 +62,14 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 			...props.style,
 		};
 
-		const index = startIndex + offsetIndex;
+		const index = startIndex! + offsetIndex;
 
 		if (index === startIndex) {
-			style.marginTop = startOffsetTop - (itemElementHeights[index] ?? averageHeight);
+			style.marginTop = startOffsetTop - (itemElementHeights[index] ?? estimatedHeight);
 		}
 
-		if (index === endIndex - 1) {
-			style.marginBottom = scrollHeight - offsetTop;
+		if (index === endIndex! - 1) {
+			style.marginBottom = scrollHeight - endOffsetTop;
 		}
 
 		return {

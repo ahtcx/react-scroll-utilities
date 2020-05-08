@@ -24,26 +24,7 @@ export const useVirtualList = <T>(
 	const containerElementRef = useRef<HTMLDivElement>(null);
 	const containerElement = containerElementRef.current;
 
-	useLayoutEffect(() => {
-		if (!containerElement) {
-			return;
-		}
-
-		if (ResizeObserver) {
-			const ro = new ResizeObserver((entries) =>
-				entries.forEach(({ contentRect }) => setContainerSize(contentRect.height))
-			);
-
-			ro.observe(containerElement);
-		}
-
-		setContainerSize(containerElement.clientHeight);
-	}, [containerElement]);
-
-	// const containerElementHeight = containerElement?.clientHeight ?? 250;
-
-	const itemElementsRef = useRef<readonly HTMLDivElement[]>([]);
-	const [itemElementSizes, setItemElementSizes] = useState<readonly (number | undefined)[]>(
+	const [itemElementSizes, setItemElementSizes] = useState<(number | undefined)[]>(
 		Array.from({ length: items.length })
 	);
 
@@ -104,6 +85,26 @@ export const useVirtualList = <T>(
 			style,
 		};
 	};
+
+	useLayoutEffect(() => {
+		if (!containerElement) {
+			return;
+		}
+
+		setContainerSize(containerElement.clientHeight);
+
+		if (!ResizeObserver) {
+			return;
+		}
+
+		const resizeObserver = new ResizeObserver((entries) =>
+			entries.forEach(({ contentRect }) => setContainerSize(contentRect.height))
+		);
+
+		resizeObserver.observe(containerElement);
+
+		return () => resizeObserver.unobserve(containerElement);
+	}, [containerElement]);
 
 	return tuple(items.slice(startIndex!, endIndex!), { getContainerProps, getItemProps });
 };

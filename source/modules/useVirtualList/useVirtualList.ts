@@ -1,55 +1,81 @@
 import type { ComponentProps } from "react";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { tuple } from "../../utilities/tuple";
 
+const DEFAULT_ITEM_ESTIMATED_SIZE = 38;
 const DEFAULT_OVERSCAN = 0;
 
 export interface VirtualListOptions {
+	readonly ResizeObserver?: typeof ResizeObserver;
 	readonly overscan?: number;
 }
 
-export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVERSCAN }: VirtualListOptions = {}) => {
-	const [scrollTop, setScrollTop] = useState(0);
-	const [estimatedHeight, setEstimatedHeight] = useState(38);
+export const useVirtualList = <T>(
+	items: readonly T[],
+	{ ResizeObserver = window.ResizeObserver, overscan = DEFAULT_OVERSCAN }: VirtualListOptions = {}
+) => {
+	const [containerScrollOffset, setContainerScrollOffset] = useState(0);
+	const [containerSize, setContainerSize] = useState(250);
+
+	const [itemEstimatedSize, setItemEstimatedSize] = useState(DEFAULT_ITEM_ESTIMATED_SIZE);
 
 	const containerElementRef = useRef<HTMLDivElement>(null);
 	const containerElement = containerElementRef.current;
-	const containerElementHeight = containerElement?.clientHeight ?? 250;
 
-	const [itemElementHeights, setItemElementHeights] = useState<readonly (number | undefined)[]>(
+	useLayoutEffect(() => {
+		if (!containerElement) {
+			return;
+		}
+
+		if (ResizeObserver) {
+			const ro = new ResizeObserver((entries) =>
+				entries.forEach(({ contentRect }) => setContainerSize(contentRect.height))
+			);
+
+			ro.observe(containerElement);
+		}
+
+		setContainerSize(containerElement.clientHeight);
+	}, [containerElement]);
+
+	// const containerElementHeight = containerElement?.clientHeight ?? 250;
+
+	const itemElementsRef = useRef<readonly HTMLDivElement[]>([]);
+	const [itemElementSizes, setItemElementSizes] = useState<readonly (number | undefined)[]>(
 		Array.from({ length: items.length })
 	);
 
 	let startOffsetTop = 0;
-	let startIndex: number | undefined;
+	let startIndex: number;
 
 	let endOffsetTop = 0;
-	let endIndex: number | undefined;
+	let endIndex: number;
 
 	let currentOffsetTop = 0;
 	let currentIndex = 0;
 
-	itemElementHeights.forEach((itemElementHeight, index) => {
-		if (typeof startIndex === "undefined" && currentOffsetTop > scrollTop - overscan) {
+	itemElementSizes.forEach((itemElementSize, index) => {
+		if (startIndex === undefined && currentOffsetTop > containerScrollOffset - overscan) {
 			startOffsetTop = currentOffsetTop;
 			startIndex = currentIndex;
 		}
 
-		if (typeof endIndex === "undefined" && currentOffsetTop >= scrollTop + containerElementHeight + overscan) {
+		if (endIndex === undefined && currentOffsetTop > containerScrollOffset + containerSize + overscan) {
 			endOffsetTop = currentOffsetTop;
 			endIndex = index;
 		}
 
-		currentOffsetTop += itemElementHeight ?? estimatedHeight;
+		currentOffsetTop += itemElementSize ?? itemEstimatedSize;
 		currentIndex = index;
 	});
+
 	const scrollHeight = currentOffsetTop;
 
 	const getContainerProps = (props: ComponentProps<"div"> = {}): ComponentProps<"div"> => ({
 		ref: containerElementRef,
-		onScroll: (event) => setScrollTop(event.currentTarget.scrollTop),
+		onScroll: (event) => setContainerScrollOffset(event.currentTarget.scrollTop),
 		style: {
 			...props.style,
 			overflowY: "auto",
@@ -62,13 +88,13 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 			...props.style,
 		};
 
-		const index = startIndex! + offsetIndex;
+		const index = startIndex + offsetIndex;
 
 		if (index === startIndex) {
-			style.marginTop = startOffsetTop - (itemElementHeights[index] ?? estimatedHeight);
+			style.marginTop = startOffsetTop - (itemElementSizes[index] ?? itemEstimatedSize);
 		}
 
-		if (index === endIndex! - 1) {
+		if (index === endIndex - 1) {
 			style.marginBottom = scrollHeight - endOffsetTop;
 		}
 
@@ -79,5 +105,5 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 		};
 	};
 
-	return tuple(items.slice(startIndex, endIndex), { getContainerProps, getItemProps });
+	return tuple(items.slice(startIndex!, endIndex!), { getContainerProps, getItemProps });
 };

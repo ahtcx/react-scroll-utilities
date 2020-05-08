@@ -12,7 +12,7 @@ export interface VirtualListOptions {
 
 export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVERSCAN }: VirtualListOptions = {}) => {
 	const [scrollTop, setScrollTop] = useState(0);
-	const [estimatedHeight, setAverageHeight] = useState(38);
+	const [estimatedHeight, setEstimatedHeight] = useState(38);
 
 	const containerElementRef = useRef<HTMLDivElement>(null);
 	const containerElement = containerElementRef.current;
@@ -37,7 +37,7 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 			startIndex = currentIndex;
 		}
 
-		if (typeof endIndex === "undefined" && currentOffsetTop >= scrollTop + containerElementHeight - overscan) {
+		if (typeof endIndex === "undefined" && currentOffsetTop >= scrollTop + containerElementHeight + overscan) {
 			endOffsetTop = currentOffsetTop;
 			endIndex = index;
 		}

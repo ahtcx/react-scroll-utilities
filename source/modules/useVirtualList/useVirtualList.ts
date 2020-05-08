@@ -33,7 +33,7 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 	let startOffsetTop = 0;
 	let startIndex = 0;
 	itemElementHeights.some((itemElementHeight, index) => {
-		if (startOffsetTop >= scrollTop) {
+		if (startOffsetTop > scrollTop) {
 			return true;
 		}
 
@@ -68,7 +68,7 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 			return;
 		}
 
-		// setItemElementHeights([...containerElement.children].map(({ clientHeight }) => clientHeight));
+		// setItemElementHeights([...containerElement.children].map(({ clientHeight }) => 38));
 	}, [containerElement]);
 
 	const getContainerProps = (props: ComponentProps<"div"> = {}): ComponentProps<"div"> => ({
@@ -88,11 +88,11 @@ export const useVirtualList = <T>(items: readonly T[], { overscan = DEFAULT_OVER
 		const index = startIndex + offsetIndex;
 
 		if (index === startIndex) {
-			style.paddingTop = startOffsetTop - (itemElementHeights[index] ?? averageHeight);
+			style.marginTop = startOffsetTop - (itemElementHeights[index] ?? averageHeight);
 		}
 
 		if (index === endIndex - 1) {
-			style.paddingBottom = scrollHeight - offsetTop;
+			style.marginBottom = scrollHeight - offsetTop;
 		}
 
 		return {

@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { tuple } from "../../utilities/tuple";
 
-const DEFAULT_ITEM_ESTIMATED_SIZE = 38;
+const DEFAULT_ITEM_ESTIMATED_SIZE = 100;
 const DEFAULT_OVERSCAN = 0;
 
 export interface VirtualListOptions {
@@ -16,17 +16,15 @@ export const useVirtualList = <T>(
 	items: readonly T[],
 	{ ResizeObserver = window.ResizeObserver, overscan = DEFAULT_OVERSCAN }: VirtualListOptions = {}
 ) => {
-	const [containerScrollOffset, setContainerScrollOffset] = useState(0);
-	const [containerSize, setContainerSize] = useState(250);
-
-	const [itemEstimatedSize, setItemEstimatedSize] = useState(DEFAULT_ITEM_ESTIMATED_SIZE);
-
 	const containerElementRef = useRef<HTMLDivElement>(null);
 	const containerElement = containerElementRef.current;
 
-	const [itemElementSizes, setItemElementSizes] = useState<(number | undefined)[]>(
-		Array.from({ length: items.length })
-	);
+	const [containerScrollOffset, setContainerScrollOffset] = useState(0);
+	const [containerSize, setContainerSize] = useState(0);
+
+	const [itemEstimatedSize, setItemEstimatedSize] = useState(DEFAULT_ITEM_ESTIMATED_SIZE);
+	const itemElementSizesRef = useRef<number[]>([]);
+	const itemElementSizes = itemElementSizesRef.current;
 
 	let startOffsetTop = 0;
 	let startIndex: number;
@@ -37,7 +35,7 @@ export const useVirtualList = <T>(
 	let currentOffsetTop = 0;
 	let currentIndex = 0;
 
-	itemElementSizes.forEach((itemElementSize, index) => {
+	items.forEach((_, index) => {
 		if (startIndex === undefined && currentOffsetTop > containerScrollOffset - overscan) {
 			startOffsetTop = currentOffsetTop;
 			startIndex = currentIndex;
@@ -48,7 +46,7 @@ export const useVirtualList = <T>(
 			endIndex = index;
 		}
 
-		currentOffsetTop += itemElementSize ?? itemEstimatedSize;
+		currentOffsetTop += itemElementSizes[index] ?? itemEstimatedSize;
 		currentIndex = index;
 	});
 
@@ -65,11 +63,19 @@ export const useVirtualList = <T>(
 	});
 
 	const getItemProps = (offsetIndex: number, props: ComponentProps<"div"> = {}): ComponentProps<"div"> => {
+		const index = (startIndex ?? 0) + offsetIndex;
+
+		const ref = (itemElement: HTMLDivElement | null) => {
+			if (!itemElement) {
+				return;
+			}
+
+			itemElementSizes[index] = itemElement.clientHeight;
+		};
+
 		const style: React.CSSProperties = {
 			...props.style,
 		};
-
-		const index = startIndex + offsetIndex;
 
 		if (index === startIndex) {
 			style.marginTop = startOffsetTop - (itemElementSizes[index] ?? itemEstimatedSize);
@@ -81,6 +87,7 @@ export const useVirtualList = <T>(
 
 		return {
 			...props,
+			ref,
 			key: index,
 			style,
 		};

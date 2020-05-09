@@ -4,15 +4,15 @@ import { useVirtualList } from "./useVirtualList";
 
 export default { title: "useVirtualList" };
 
-export const withText = () => {
+export const WithText: React.FC = () => {
 	const items = Array.from({ length: 10 }, (_, index) => index);
 
-	const [virtualizedItems, { getContainerProps, getItemProps }] = useVirtualList(items);
+	const [{ ref, onScroll, style }, virtualItems] = useVirtualList(items);
 
 	return (
-		<div {...getContainerProps({ style: { height: 250 } })}>
-			{virtualizedItems.map((item, index) => (
-				<div {...getItemProps(index)}>
+		<div ref={ref} onScroll={onScroll} style={{ ...style, height: 250 }}>
+			{virtualItems.map(({ ref, key, item, style }) => (
+				<div ref={ref} key={key} style={style}>
 					item <span style={{ fontSize: 32 }}>{item}</span>
 				</div>
 			))}

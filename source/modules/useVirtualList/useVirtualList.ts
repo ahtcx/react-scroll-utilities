@@ -3,36 +3,44 @@ import type { ComponentProps } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { getArrayMean } from "../../utilities/getArrayMean";
-import { tuple } from "../../utilities/tuple";
 
-const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE = 100;
-const DEFAULT_OVERSCAN = 0;
+export type MaybeElement<T extends HTMLElement> = T | null;
 
-export interface VirtualListOptions {
+const DEFAULT_RESIZE_OBSERVER: VirtualListOptions["ResizeObserver"] = window.ResizeObserver;
+const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualListOptions["getItemEstimatedSize"] = getArrayMean;
+const DEFAULT_GET_ITEM_KEY: VirtualListOptions["getItemKey"] = (_, index) => index;
+const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualListOptions["initialItemEstimatedSize"] = 100;
+const DEFAULT_OVERSCAN: VirtualListOptions["overscan"] = 0;
+
+export interface VirtualListOptions<T = any> {
 	readonly ResizeObserver?: typeof ResizeObserver;
-	readonly initialItemEstimatedSize?: number;
 	readonly getItemEstimatedSize?: (sizes: number[]) => number;
+	readonly getItemKey?: (item: T, index: number) => string | number;
+	readonly initialItemEstimatedSize?: number;
 	readonly overscan?: number;
 }
 
-export const useVirtualList = <T>(
+export const useVirtualList = <T, ContainerElement extends HTMLElement = any, ItemElement extends HTMLElement = any>(
 	items: readonly T[],
 	{
-		ResizeObserver = window.ResizeObserver,
+		ResizeObserver = DEFAULT_RESIZE_OBSERVER,
+		getItemEstimatedSize = DEFAULT_GET_ITEM_ESTIMATED_SIZE,
+		getItemKey = DEFAULT_GET_ITEM_KEY,
 		initialItemEstimatedSize = DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE,
-		getItemEstimatedSize = getArrayMean,
 		overscan = DEFAULT_OVERSCAN,
-	}: VirtualListOptions = {}
+	}: VirtualListOptions<T> = {}
 ) => {
-	const containerElementRef = useRef<HTMLDivElement>(null);
-	const containerElement = containerElementRef.current;
+	//
+	const containerElementRef = useRef<MaybeElement<ContainerElement>>(null);
+	const [containerSize, setContainerSize] = useState<number>(0);
+
+	const itemElementsRef = useRef<readonly MaybeElement<ItemElement>[]>([]);
+	const [itemElementSizes, setItemElementSizes] = useState<number[]>(Array.from({ length: items.length }));
+	console.log({ itemElementSizes });
+
+	const itemEstimatedSize = getItemEstimatedSize(itemElementSizes) || initialItemEstimatedSize;
 
 	const [containerScrollOffset, setContainerScrollOffset] = useState(0);
-	const [containerSize, setContainerSize] = useState(0);
-
-	const [itemElementSizes, setItemElementSizes] = useState<number[]>([]);
-
-	const itemEstimatedSize = getItemEstimatedSize(itemElementSizes) ?? initialItemEstimatedSize;
 
 	let startOffsetTop = 0;
 	let startIndex: number;
@@ -50,6 +58,7 @@ export const useVirtualList = <T>(
 		}
 
 		if (endIndex === undefined && currentOffsetTop > containerScrollOffset + containerSize + overscan) {
+			console.log({ currentOffsetTop, containerScrollOffset, containerSize });
 			endOffsetTop = currentOffsetTop;
 			endIndex = index;
 		}
@@ -58,93 +67,70 @@ export const useVirtualList = <T>(
 		currentIndex = index;
 	});
 
+	startIndex = startIndex! ?? 0;
+	endIndex = endIndex! ?? Math.min(items.length - 1, Math.ceil(containerSize / itemEstimatedSize));
+
 	const scrollHeight = currentOffsetTop;
 
-	const getContainerProps = (props: ComponentProps<"div"> = {}): ComponentProps<"div"> => ({
+	//
+	// GOTTA START HERE
+	//
+
+	useLayoutEffect(() => {
+		const containerElement = containerElementRef.current;
+		setContainerSize(containerElement?.clientHeight ?? 0);
+
+		if (!ResizeObserver || !containerElement) {
+			return;
+		}
+
+		const resizeObserver = new ResizeObserver((entries) => setContainerSize(entries[0].contentRect.height));
+		resizeObserver.observe(containerElement);
+
+		return () => resizeObserver.unobserve(containerElement);
+	}, [ResizeObserver]);
+
+	//
+	//
+	//
+
+	//
+	// WILL END HERE
+	//
+
+	const virtualItemsContainerProps = {
 		ref: containerElementRef,
 		onScroll: (event) => setContainerScrollOffset(event.currentTarget.scrollTop),
 		style: {
-			...props.style,
+			// ...props.style,
 			overflowY: "auto",
-			willChange: "transform",
-		},
-	});
+		} as React.CSSProperties,
+	};
 
-	const getItemProps = (offsetIndex: number, props: ComponentProps<"div"> = {}): ComponentProps<"div"> => {
+	const virtualItems = items.slice(startIndex, endIndex).map((item, offsetIndex) => {
 		const index = startIndex + offsetIndex;
 
-		const ref = (itemElement: HTMLDivElement | null) => {
-			if (!itemElement) {
-				return;
-			}
-
-			console.log(`rendered ${index} ${offsetIndex}`);
-
-			if (itemElementSizes[index] !== itemElement.clientHeight) {
-				setItemElementSizes((previousItemElementSizes) => {
-					previousItemElementSizes[index] = itemElement.clientHeight;
-					return previousItemElementSizes;
-				});
-			}
-
-			if (!ResizeObserver) {
-				return;
-			}
-
-			// // TODO: unobserve stuff - probably would cause memory leak otherwise
-			// const resizeObserver = new ResizeObserver((entries) =>
-			// 	entries.forEach(({ contentRect, target }) => {
-			// 		if (contentRect.height && itemElementSizes[index] !== contentRect.height) {
-			// 			setItemElementSizes((previousItemElementSizes) => {
-			// 				previousItemElementSizes[index] = contentRect.height;
-			// 				return previousItemElementSizes;
-			// 			});
-			// 		}
-			// 	})
-			// );
-
-			// resizeObserver.observe(itemElement, { box: "content-box" });
+		const ref: React.RefCallback<ItemElement> = (itemElement) => {
+			const newItemElements = [...itemElementsRef.current.filter(Boolean)];
+			newItemElements.splice(offsetIndex, 1, itemElement);
+			itemElementsRef.current = newItemElements;
 		};
 
-		const style: React.CSSProperties = {
-			...props.style,
-		};
-
+		const style: React.CSSProperties = {};
 		if (index === startIndex) {
 			style.marginTop = startOffsetTop - (itemElementSizes[index] ?? itemEstimatedSize);
 		}
-
 		if (index === endIndex - 1) {
 			style.marginBottom = scrollHeight - endOffsetTop;
 		}
 
 		return {
-			...props,
+			item,
 			ref,
-			key: index,
+			key: getItemKey(item, index),
 			style,
-		};
-	};
+		} as const;
+	});
 
-	useLayoutEffect(() => {
-		if (!containerElement) {
-			return;
-		}
-
-		setContainerSize(containerElement.clientHeight);
-
-		if (!ResizeObserver) {
-			return;
-		}
-
-		const resizeObserver = new ResizeObserver((entries) =>
-			entries.forEach(({ contentRect }) => setContainerSize(contentRect.height))
-		);
-
-		resizeObserver.observe(containerElement);
-
-		return () => resizeObserver.unobserve(containerElement);
-	}, [containerElement]);
-
-	return tuple(items.slice(startIndex!, endIndex!), { getContainerProps, getItemProps });
+	return [virtualItemsContainerProps, virtualItems] as const;
 };

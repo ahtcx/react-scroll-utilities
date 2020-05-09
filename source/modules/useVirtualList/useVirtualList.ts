@@ -2,19 +2,27 @@ import type { ComponentProps } from "react";
 
 import { useLayoutEffect, useRef, useState } from "react";
 
+import { getArrayMean } from "../../utilities/getArrayMean";
 import { tuple } from "../../utilities/tuple";
 
-const DEFAULT_ITEM_ESTIMATED_SIZE = 100;
+const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE = 100;
 const DEFAULT_OVERSCAN = 0;
 
 export interface VirtualListOptions {
 	readonly ResizeObserver?: typeof ResizeObserver;
+	readonly initialItemEstimatedSize?: number;
+	readonly getItemEstimatedSize?: (sizes: number[]) => number;
 	readonly overscan?: number;
 }
 
 export const useVirtualList = <T>(
 	items: readonly T[],
-	{ ResizeObserver = window.ResizeObserver, overscan = DEFAULT_OVERSCAN }: VirtualListOptions = {}
+	{
+		ResizeObserver = window.ResizeObserver,
+		initialItemEstimatedSize = DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE,
+		getItemEstimatedSize = getArrayMean,
+		overscan = DEFAULT_OVERSCAN,
+	}: VirtualListOptions = {}
 ) => {
 	const containerElementRef = useRef<HTMLDivElement>(null);
 	const containerElement = containerElementRef.current;
@@ -22,9 +30,9 @@ export const useVirtualList = <T>(
 	const [containerScrollOffset, setContainerScrollOffset] = useState(0);
 	const [containerSize, setContainerSize] = useState(0);
 
-	const [itemEstimatedSize, setItemEstimatedSize] = useState(DEFAULT_ITEM_ESTIMATED_SIZE);
-	const itemElementSizesRef = useRef<number[]>([]);
-	const itemElementSizes = itemElementSizesRef.current;
+	const [itemElementSizes, setItemElementSizes] = useState<number[]>([]);
+
+	const itemEstimatedSize = getItemEstimatedSize(itemElementSizes) ?? initialItemEstimatedSize;
 
 	let startOffsetTop = 0;
 	let startIndex: number;
@@ -63,14 +71,39 @@ export const useVirtualList = <T>(
 	});
 
 	const getItemProps = (offsetIndex: number, props: ComponentProps<"div"> = {}): ComponentProps<"div"> => {
-		const index = (startIndex ?? 0) + offsetIndex;
+		const index = startIndex + offsetIndex;
 
 		const ref = (itemElement: HTMLDivElement | null) => {
 			if (!itemElement) {
 				return;
 			}
 
-			itemElementSizes[index] = itemElement.clientHeight;
+			console.log(`rendered ${index} ${offsetIndex}`);
+
+			if (itemElementSizes[index] !== itemElement.clientHeight) {
+				setItemElementSizes((previousItemElementSizes) => {
+					previousItemElementSizes[index] = itemElement.clientHeight;
+					return previousItemElementSizes;
+				});
+			}
+
+			if (!ResizeObserver) {
+				return;
+			}
+
+			// // TODO: unobserve stuff - probably would cause memory leak otherwise
+			// const resizeObserver = new ResizeObserver((entries) =>
+			// 	entries.forEach(({ contentRect, target }) => {
+			// 		if (contentRect.height && itemElementSizes[index] !== contentRect.height) {
+			// 			setItemElementSizes((previousItemElementSizes) => {
+			// 				previousItemElementSizes[index] = contentRect.height;
+			// 				return previousItemElementSizes;
+			// 			});
+			// 		}
+			// 	})
+			// );
+
+			// resizeObserver.observe(itemElement, { box: "content-box" });
 		};
 
 		const style: React.CSSProperties = {

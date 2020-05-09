@@ -9,7 +9,7 @@ export type MaybeElement<T extends HTMLElement> = T | null;
 const DEFAULT_RESIZE_OBSERVER: VirtualListOptions["ResizeObserver"] = window.ResizeObserver;
 const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualListOptions["getItemEstimatedSize"] = getArrayMean;
 const DEFAULT_GET_ITEM_KEY: VirtualListOptions["getItemKey"] = (_, index) => index;
-const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualListOptions["initialItemEstimatedSize"] = 100;
+const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualListOptions["initialItemEstimatedSize"] = 38;
 const DEFAULT_OVERSCAN: VirtualListOptions["overscan"] = 0;
 
 export interface VirtualListOptions<T = any> {
@@ -36,7 +36,6 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 
 	const itemElementsRef = useRef<readonly MaybeElement<ItemElement>[]>([]);
 	const [itemElementSizes, setItemElementSizes] = useState<number[]>(Array.from({ length: items.length }));
-	console.log({ itemElementSizes });
 
 	const itemEstimatedSize = getItemEstimatedSize(itemElementSizes) || initialItemEstimatedSize;
 
@@ -57,8 +56,10 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 			startIndex = currentIndex;
 		}
 
-		if (endIndex === undefined && currentOffsetTop > containerScrollOffset + containerSize + overscan) {
-			console.log({ currentOffsetTop, containerScrollOffset, containerSize });
+		if (
+			endIndex === undefined &&
+			(currentOffsetTop > containerScrollOffset + containerSize + overscan || index === items.length)
+		) {
 			endOffsetTop = currentOffsetTop;
 			endIndex = index;
 		}
@@ -66,9 +67,6 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 		currentOffsetTop += itemElementSizes[index] ?? itemEstimatedSize;
 		currentIndex = index;
 	});
-
-	startIndex = startIndex! ?? 0;
-	endIndex = endIndex! ?? Math.min(items.length - 1, Math.ceil(containerSize / itemEstimatedSize));
 
 	const scrollHeight = currentOffsetTop;
 
@@ -107,7 +105,7 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 		} as React.CSSProperties,
 	};
 
-	const virtualItems = items.slice(startIndex, endIndex).map((item, offsetIndex) => {
+	const virtualItems = items.slice(startIndex!, endIndex!).map((item, offsetIndex) => {
 		const index = startIndex + offsetIndex;
 
 		const ref: React.RefCallback<ItemElement> = (itemElement) => {

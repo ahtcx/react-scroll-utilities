@@ -5,7 +5,7 @@ import { useVirtualList } from "./useVirtualList";
 export default { title: "useVirtualList" };
 
 export const WithText: React.FC = () => {
-	const items = Array.from({ length: 10 }, (_, index) => index);
+	const items = Array.from({ length: 200 }, (_, index) => index);
 
 	const [{ ref, onScroll, style }, virtualItems] = useVirtualList(items);
 

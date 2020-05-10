@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { getArrayMean } from "../../utilities/getArrayMean";
+import { useForceUpdate } from "../../utilities/useForceUpdate";
 
 export type MaybeElement<T extends Element> = T | null;
 
@@ -30,9 +31,10 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 		overscan = DEFAULT_OVERSCAN,
 	}: VirtualListOptions<T> = {}
 ) => {
-	//
+	const forceUpdate = useForceUpdate();
+
 	const containerElementRef = useRef<MaybeElement<ContainerElement>>(null);
-	const [containerSize, setContainerSize] = useState<number>(0);
+	const [containerSize, setContainerSize] = useState(0);
 
 	const itemElementsResizeObserverRef = useRef<ResizeObserver>();
 	const itemElementsRef = useRef<readonly MaybeElement<ItemElement>[]>([]);
@@ -41,8 +43,6 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 	const itemEstimatedSize = getItemEstimatedSize(itemElementSizesRef.current) || initialItemEstimatedSize;
 
 	const [containerScrollOffset, setContainerScrollOffset] = useState(0);
-
-	const [n, setN] = useState(0);
 
 	let startOffsetTop = 0;
 	let startIndex: number;
@@ -73,10 +73,6 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 
 	const scrollHeight = currentOffsetTop;
 
-	//
-	// GOTTA START HERE
-	//
-
 	useLayoutEffect(() => {
 		const containerElement = containerElementRef.current;
 		setContainerSize(containerElement?.clientHeight ?? 0);
@@ -91,13 +87,8 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 		return () => resizeObserver.unobserve(containerElement);
 	}, [ResizeObserver]);
 
-	//
-	//
-	//
 	useLayoutEffect(() => {
-		const containerElement = containerElementRef.current;
-
-		if (!ResizeObserver || !containerElement) {
+		if (!ResizeObserver) {
 			return;
 		}
 
@@ -108,17 +99,11 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 
 				if (itemElementSizesRef.current[index] !== entry.contentRect.height) {
 					itemElementSizesRef.current[index] = entry.contentRect.height;
-					setN((n) => n + 1);
+					forceUpdate();
 				}
 			}
 		});
-	}, [ResizeObserver]);
-
-	//
-
-	//
-	// WILL END HERE
-	//
+	}, [ResizeObserver, forceUpdate]);
 
 	const virtualItemsContainerProps = {
 		ref: containerElementRef,

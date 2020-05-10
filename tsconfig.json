@@ -1,11 +1,10 @@
 {
 	"compilerOptions": {
-		// "module": "commonjs",
 		"moduleResolution": "node",
 		"strict": true,
 		"noEmit": true,
 		"target": "ESNext",
 		"jsx": "react"
 	},
-	"include": ["source"]
+	"include": ["source", ".storybook"]
 }

@@ -7,7 +7,7 @@ export type MaybeElement<T extends Element> = T | null;
 const DEFAULT_RESIZE_OBSERVER: VirtualListOptions["ResizeObserver"] = window.ResizeObserver;
 const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualListOptions["getItemEstimatedSize"] = getArrayMean;
 const DEFAULT_GET_ITEM_KEY: VirtualListOptions["getItemKey"] = (_, index) => index;
-const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualListOptions["initialItemEstimatedSize"] = 38;
+const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualListOptions["initialItemEstimatedSize"] = 100;
 const DEFAULT_OVERSCAN: VirtualListOptions["overscan"] = 0;
 
 export const IndexSymbol = Symbol();
@@ -36,12 +36,13 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 
 	const itemElementsResizeObserverRef = useRef<ResizeObserver>();
 	const itemElementsRef = useRef<readonly MaybeElement<ItemElement>[]>([]);
-	const [itemElementSizes, setItemElementSizes] = useState<number[]>(Array.from({ length: items.length }));
-	// console.log(itemElementSizes);
+	const itemElementSizesRef = useRef<number[]>(Array.from({ length: items.length }));
 
-	const itemEstimatedSize = getItemEstimatedSize(itemElementSizes) || initialItemEstimatedSize;
+	const itemEstimatedSize = getItemEstimatedSize(itemElementSizesRef.current) || initialItemEstimatedSize;
 
 	const [containerScrollOffset, setContainerScrollOffset] = useState(0);
+
+	const [n, setN] = useState(0);
 
 	let startOffsetTop = 0;
 	let startIndex: number;
@@ -66,7 +67,7 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 			endIndex = index;
 		}
 
-		currentOffsetTop += itemElementSizes[index] ?? itemEstimatedSize;
+		currentOffsetTop += itemElementSizesRef.current[index] ?? itemEstimatedSize;
 		currentIndex = index;
 	});
 
@@ -105,18 +106,9 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 				// @ts-ignore
 				const index: number = entry.target[IndexSymbol];
 
-				// console.log(itemElementSizes);
-				const currentItemElementSize = itemElementSizes[index];
-				const newItemElementSize = entry.contentRect.height;
-
-				if (currentItemElementSize !== newItemElementSize) {
-					// console.log({ currentItemElementSize, newItemElementSize });
-					setItemElementSizes((previousItemElementSizes) => {
-						const a = [...previousItemElementSizes];
-						a[index] = newItemElementSize;
-						console.log(a);
-						return a;
-					});
+				if (itemElementSizesRef.current[index] !== entry.contentRect.height) {
+					itemElementSizesRef.current[index] = entry.contentRect.height;
+					setN((n) => n + 1);
 				}
 			}
 		});
@@ -158,7 +150,7 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 
 		const style: React.CSSProperties = {};
 		if (index === startIndex) {
-			style.marginTop = startOffsetTop - (itemElementSizes[index] ?? itemEstimatedSize);
+			style.marginTop = startOffsetTop - (itemElementSizesRef.current[index] ?? itemEstimatedSize);
 		}
 		if (index === endIndex - 1) {
 			style.marginBottom = scrollHeight - endOffsetTop;

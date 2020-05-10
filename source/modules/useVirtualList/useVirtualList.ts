@@ -1,16 +1,16 @@
-import type { ComponentProps } from "react";
-
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { getArrayMean } from "../../utilities/getArrayMean";
 
-export type MaybeElement<T extends HTMLElement> = T | null;
+export type MaybeElement<T extends Element> = T | null;
 
 const DEFAULT_RESIZE_OBSERVER: VirtualListOptions["ResizeObserver"] = window.ResizeObserver;
 const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualListOptions["getItemEstimatedSize"] = getArrayMean;
 const DEFAULT_GET_ITEM_KEY: VirtualListOptions["getItemKey"] = (_, index) => index;
 const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualListOptions["initialItemEstimatedSize"] = 38;
 const DEFAULT_OVERSCAN: VirtualListOptions["overscan"] = 0;
+
+export const IndexSymbol = Symbol();
 
 export interface VirtualListOptions<T = any> {
 	readonly ResizeObserver?: typeof ResizeObserver;
@@ -34,8 +34,10 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 	const containerElementRef = useRef<MaybeElement<ContainerElement>>(null);
 	const [containerSize, setContainerSize] = useState<number>(0);
 
+	const itemElementsResizeObserverRef = useRef<ResizeObserver>();
 	const itemElementsRef = useRef<readonly MaybeElement<ItemElement>[]>([]);
 	const [itemElementSizes, setItemElementSizes] = useState<number[]>(Array.from({ length: items.length }));
+	// console.log(itemElementSizes);
 
 	const itemEstimatedSize = getItemEstimatedSize(itemElementSizes) || initialItemEstimatedSize;
 
@@ -91,6 +93,36 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 	//
 	//
 	//
+	useLayoutEffect(() => {
+		const containerElement = containerElementRef.current;
+
+		if (!ResizeObserver || !containerElement) {
+			return;
+		}
+
+		itemElementsResizeObserverRef.current = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				// @ts-ignore
+				const index: number = entry.target[IndexSymbol];
+
+				// console.log(itemElementSizes);
+				const currentItemElementSize = itemElementSizes[index];
+				const newItemElementSize = entry.contentRect.height;
+
+				if (currentItemElementSize !== newItemElementSize) {
+					// console.log({ currentItemElementSize, newItemElementSize });
+					setItemElementSizes((previousItemElementSizes) => {
+						const a = [...previousItemElementSizes];
+						a[index] = newItemElementSize;
+						console.log(a);
+						return a;
+					});
+				}
+			}
+		});
+	}, [ResizeObserver]);
+
+	//
 
 	//
 	// WILL END HERE
@@ -99,19 +131,29 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 	const virtualItemsContainerProps = {
 		ref: containerElementRef,
 		onScroll: (event) => setContainerScrollOffset(event.currentTarget.scrollTop),
-		style: {
-			// ...props.style,
-			overflowY: "auto",
-		} as React.CSSProperties,
 	};
 
 	const virtualItems = items.slice(startIndex!, endIndex!).map((item, offsetIndex) => {
 		const index = startIndex + offsetIndex;
 
 		const ref: React.RefCallback<ItemElement> = (itemElement) => {
-			const newItemElements = [...itemElementsRef.current.filter(Boolean)];
-			newItemElements.splice(offsetIndex, 1, itemElement);
-			itemElementsRef.current = newItemElements;
+			const newItemElements = [...itemElementsRef.current];
+
+			const previousItemElement = newItemElements[offsetIndex];
+
+			const itemElementsResizeObserver = itemElementsResizeObserverRef.current;
+
+			if (itemElementsResizeObserver && previousItemElement) {
+				itemElementsResizeObserver.unobserve(previousItemElement);
+			}
+			if (itemElementsResizeObserver && itemElement) {
+				// @ts-ignore
+				itemElement[IndexSymbol] = index;
+				itemElementsResizeObserver.observe(itemElement);
+			}
+
+			newItemElements[offsetIndex] = itemElement;
+			itemElementsRef.current = newItemElements.filter(Boolean);
 		};
 
 		const style: React.CSSProperties = {};

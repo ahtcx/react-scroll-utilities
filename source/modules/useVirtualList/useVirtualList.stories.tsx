@@ -7,10 +7,10 @@ export default { title: "useVirtualList" };
 export const WithText: React.FC = () => {
 	const items = Array.from({ length: 200 }, (_, index) => index);
 
-	const [{ ref, onScroll, style }, virtualItems] = useVirtualList(items);
+	const [{ ref, onScroll }, virtualItems] = useVirtualList(items);
 
 	return (
-		<div ref={ref} onScroll={onScroll} style={{ ...style, height: 250 }}>
+		<div ref={ref} onScroll={onScroll} style={{ overflowY: "auto", height: 250 }}>
 			{virtualItems.map(({ ref, key, item, style }) => (
 				<div ref={ref} key={key} style={style}>
 					item <span style={{ fontSize: 32 }}>{item}</span>

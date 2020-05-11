@@ -38,27 +38,27 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 ) => {
 	const forceUpdate = useForceUpdate();
 
+	const resizeObserverRef = useRef<ResizeObserver>();
+
 	const containerElementRef = useRef<MaybeElement<ContainerElement>>(null);
 	const containerSizeRef = useRef(0);
-	const containerSize = containerSizeRef.current;
-
-	const itemElementsResizeObserverRef = useRef<ResizeObserver>();
-	const itemElementsRef = useRef<MaybeElement<ItemElement>[]>([]);
-	const itemElementOffsetsRef = useRef<number[]>(Array.from({ length: items.length }));
-	const itemElementSizesRef = useRef<number[]>(Array.from({ length: items.length }));
-
-	const itemEstimatedSize = getItemEstimatedSize(itemElementSizesRef.current) || initialItemEstimatedSize;
-
 	const containerScrollOffsetRef = useRef(0);
 
-	const getItemSize = (index: number) => itemElementSizesRef.current[index] ?? itemEstimatedSize;
-	const getItemOffset = (index: number) => itemElementOffsetsRef.current[index];
+	const itemElementsRef = useRef<MaybeElement<ItemElement>[]>([]);
+	const itemElementsOffsetsRef = useRef<number[]>(Array.from({ length: items.length }));
+	const itemElementsSizesRef = useRef<number[]>(Array.from({ length: items.length }));
+
+	const itemEstimatedSize = getItemEstimatedSize(itemElementsSizesRef.current) || initialItemEstimatedSize;
+
+	const getItemSize = (index: number) => itemElementsSizesRef.current[index] ?? itemEstimatedSize;
+	const getItemOffset = (index: number) => itemElementsOffsetsRef.current[index];
 
 	let startIndex: number;
 	let endIndex: number;
 
 	const scrollHeight =
-		itemElementOffsetsRef.current.reduce((previousValue, _, currentIndex) => {
+		itemElementsOffsetsRef.current.reduce((previousValue, _, currentIndex) => {
+			const containerSize = containerSizeRef.current;
 			const containerScrollOffset = containerScrollOffsetRef.current;
 			const containerCurrentOffset = currentIndex ? previousValue + getItemSize(currentIndex - 1) : 0;
 
@@ -69,9 +69,9 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 				endIndex = currentIndex - 1;
 			}
 
-			itemElementOffsetsRef.current[currentIndex] = containerCurrentOffset;
+			itemElementsOffsetsRef.current[currentIndex] = containerCurrentOffset;
 			return containerCurrentOffset;
-		}, 0) + getItemSize(itemElementSizesRef.current.length - 1);
+		}, 0) + getItemSize(itemElementsSizesRef.current.length - 1);
 
 	startIndex = Math.max(startIndex! ?? 0, 0);
 	endIndex = Math.min(endIndex! ?? items.length - 1, items.length - 1);
@@ -84,26 +84,28 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			return;
 		}
 
-		itemElementsResizeObserverRef.current = new ResizeObserver((entries) => {
+		const resizeObserver = new ResizeObserver((entries) => {
 			for (const entry of entries) {
+				if (entry.target === containerElement) {
+					containerSizeRef.current = entry.contentRect.height;
+					forceUpdate();
+					return;
+				}
+
 				// @ts-ignore
 				const index: number = entry.target[IndexSymbol];
 
-				if (itemElementSizesRef.current[index] !== entry.contentRect.height) {
-					itemElementSizesRef.current[index] = entry.contentRect.height;
+				if (itemElementsSizesRef.current[index] !== entry.contentRect.height) {
+					itemElementsSizesRef.current[index] = entry.contentRect.height;
 					forceUpdate();
 				}
 			}
 		});
 
-		const resizeObserver = new ResizeObserver((entries) => {
-			containerSizeRef.current = entries[0].contentRect.height;
-			forceUpdate();
-		});
+		resizeObserverRef.current = resizeObserver;
 
 		resizeObserver.observe(containerElement);
-
-		return () => resizeObserver.unobserve(containerElement);
+		return () => resizeObserver.disconnect();
 	}, [ResizeObserver, forceUpdate]);
 
 	const virtualItemsContainerProps = {
@@ -120,19 +122,19 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 
 		const ref: React.RefCallback<ItemElement> = (newItemElement) => {
 			const itemElements = itemElementsRef.current;
-			const itemElementsResizeObserver = itemElementsResizeObserverRef.current;
+			const resizeObserver = resizeObserverRef.current;
 
 			// unobserve the previous item element if it exists
 			const previousItemElement = itemElements[offsetIndex];
-			if (itemElementsResizeObserver && previousItemElement) {
-				itemElementsResizeObserver.unobserve(previousItemElement);
+			if (resizeObserver && previousItemElement) {
+				resizeObserver.unobserve(previousItemElement);
 			}
 
 			// observe the new item element if it exists and add it's index
-			if (itemElementsResizeObserver && newItemElement) {
+			if (resizeObserver && newItemElement) {
 				// @ts-ignore
 				newItemElement[IndexSymbol] = index;
-				itemElementsResizeObserver.observe(newItemElement);
+				resizeObserver.observe(newItemElement);
 			}
 
 			// update the item elements with the new item element

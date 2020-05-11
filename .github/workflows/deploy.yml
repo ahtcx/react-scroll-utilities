@@ -19,3 +19,5 @@ jobs:
         run: cd documentation && yarn install
       - name: Deploy
         run: cd documentation && yarn deploy
+        env:
+          GITHUB_USER: TEST

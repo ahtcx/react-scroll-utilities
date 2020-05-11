@@ -12,7 +12,7 @@ const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VListOptions["getItemEstimatedSize"] = ge
 const DEFAULT_GET_ITEM_KEY: VListOptions["getItemKey"] = (_, index) => index;
 const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VListOptions["initialItemEstimatedSize"] = 50;
 const DEFAULT_ORIENTATION: VListOptions["orientation"] = "vertical";
-const DEFAULT_OVERSCAN: VListOptions["overscan"] = 0;
+const DEFAULT_OVERSCAN: VListOptions["overscan"] = 10;
 
 export const IndexSymbol = Symbol();
 
@@ -65,16 +65,16 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			if (startIndex === undefined && containerCurrentOffset > containerScrollOffset - overscan) {
 				startIndex = currentIndex - 1;
 			}
-
 			if (endIndex === undefined && containerCurrentOffset > containerScrollOffset + containerSize + overscan) {
-				endIndex = currentIndex;
+				endIndex = currentIndex - 1;
 			}
 
 			itemElementOffsetsRef.current[currentIndex] = containerCurrentOffset;
 			return containerCurrentOffset;
 		}, 0) + getItemSize(itemElementSizesRef.current.length - 1);
 
-	endIndex = endIndex! ?? items.length;
+	startIndex = Math.max(startIndex! ?? 0, 0);
+	endIndex = Math.min(endIndex! ?? items.length - 1, items.length - 1);
 
 	// force a rerender when the container size changes
 	useLayoutEffect(() => {
@@ -84,7 +84,7 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			return;
 		}
 
-		itemElementsResizeObserverRef.current = new ResizeObserver(entries => {
+		itemElementsResizeObserverRef.current = new ResizeObserver((entries) => {
 			for (const entry of entries) {
 				// @ts-ignore
 				const index: number = entry.target[IndexSymbol];
@@ -96,7 +96,7 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			}
 		});
 
-		const resizeObserver = new ResizeObserver(entries => {
+		const resizeObserver = new ResizeObserver((entries) => {
 			containerSizeRef.current = entries[0].contentRect.height;
 			forceUpdate();
 		});
@@ -115,10 +115,10 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 	};
 
 	// subset of passed items to be displayed
-	const virtualItems = items.slice(startIndex!, endIndex!).map((item, offsetIndex) => {
+	const virtualItems = items.slice(startIndex, endIndex + 1).map((item, offsetIndex) => {
 		const index = startIndex + offsetIndex;
 
-		const ref: React.RefCallback<ItemElement> = newItemElement => {
+		const ref: React.RefCallback<ItemElement> = (newItemElement) => {
 			const itemElements = itemElementsRef.current;
 			const itemElementsResizeObserver = itemElementsResizeObserverRef.current;
 
@@ -144,7 +144,7 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 		if (index === startIndex) {
 			style.marginTop = getItemOffset(index);
 		}
-		if (index === endIndex - 1) {
+		if (index === endIndex) {
 			style.marginBottom = scrollHeight - getItemOffset(index) - getItemSize(index);
 		}
 

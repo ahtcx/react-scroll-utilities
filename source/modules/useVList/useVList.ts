@@ -33,7 +33,7 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 		getItemKey = DEFAULT_GET_ITEM_KEY,
 		initialItemEstimatedSize = DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE,
 		orientation = DEFAULT_ORIENTATION,
-		overscan = DEFAULT_OVERSCAN
+		overscan = DEFAULT_OVERSCAN,
 	}: VListOptions<T> = {}
 ) => {
 	const forceUpdate = useForceUpdate();
@@ -112,8 +112,9 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 		ref: containerElementRef,
 		onScroll: (event: React.UIEvent<ContainerElement>) => {
 			containerScrollOffsetRef.current = event.currentTarget.scrollTop;
+			// TODO: only update when start and index change
 			forceUpdate();
-		}
+		},
 	};
 
 	// subset of passed items to be displayed
@@ -155,7 +156,7 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			item,
 			ref,
 			key: getItemKey(item, index),
-			style
+			style,
 		} as const;
 	});
 

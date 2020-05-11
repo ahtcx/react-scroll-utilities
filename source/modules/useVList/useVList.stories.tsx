@@ -5,7 +5,7 @@ import { useVList } from "./useVList";
 export default { title: "useVList" };
 
 export const VList: React.FC = () => {
-	const items = Array.from({ length: 10000 }, (_, index) => index);
+	const items = Array.from({ length: 20 }, (_, index) => index);
 
 	const [{ ref, onScroll }, virtualItems, { getItemOffset, getItemSize }] = useVList(items);
 

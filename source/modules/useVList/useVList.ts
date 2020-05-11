@@ -40,6 +40,8 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 
 	const resizeObserverRef = useRef<ResizeObserver>();
 
+	const renderedRangeRef = useRef([0, 0] as const);
+
 	const containerElementRef = useRef<MaybeElement<ContainerElement>>(null);
 	const containerSizeRef = useRef(0);
 	const containerScrollOffsetRef = useRef(0);
@@ -113,9 +115,34 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 	const virtualItemsContainerProps = {
 		ref: containerElementRef,
 		onScroll: (event: React.UIEvent<ContainerElement>) => {
-			containerScrollOffsetRef.current = event.currentTarget.scrollTop;
+			const currentScrollTop = containerScrollOffsetRef.current;
+			const newScrollTop = event.currentTarget.scrollTop;
+			containerScrollOffsetRef.current = newScrollTop;
+
+			console.log(
+				newScrollTop,
+				itemElementsOffsetsRef.current.slice(startIndex, endIndex + 2),
+				itemElementsOffsetsRef.current[startIndex],
+				itemElementsOffsetsRef.current[endIndex]
+			);
 			// TODO: only update when start and index change
-			forceUpdate();
+			if (
+				(newScrollTop > currentScrollTop &&
+					(newScrollTop >= itemElementsOffsetsRef.current[startIndex + 1] ||
+						newScrollTop < itemElementsOffsetsRef.current[startIndex])) ||
+				(newScrollTop < currentScrollTop &&
+					(newScrollTop >= itemElementsOffsetsRef.current[endIndex + 1] ||
+						newScrollTop < itemElementsOffsetsRef.current[endIndex]))
+			) {
+				console.log(
+					newScrollTop >= itemElementsOffsetsRef.current[startIndex + 1],
+					newScrollTop < itemElementsOffsetsRef.current[startIndex],
+					newScrollTop >= itemElementsOffsetsRef.current[endIndex + 1],
+					newScrollTop < itemElementsOffsetsRef.current[endIndex]
+				);
+				console.log("update", {});
+				forceUpdate();
+			}
 		},
 	};
 

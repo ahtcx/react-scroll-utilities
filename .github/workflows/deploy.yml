@@ -18,10 +18,8 @@ jobs:
       - name: Install packages
         run: cd documentation && yarn install
       - name: Deploy
-        # with:
-        #   repo-token: ${{ secrets.GITHUB_TOKEN }}
         env:
-          GIT_USER: "TEST"
+          GIT_USER: "ahtcx"
           GH_NAME: "ahtcx"
           GH_EMAIL: "alexandre@hitchcox.me"
         run: |

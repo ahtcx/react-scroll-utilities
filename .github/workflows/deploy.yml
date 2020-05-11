@@ -20,4 +20,4 @@ jobs:
       - name: Deploy
         run: cd documentation && yarn deploy
         env:
-          GITHUB_USER: TEST
+          GIT_USER: "TEST"

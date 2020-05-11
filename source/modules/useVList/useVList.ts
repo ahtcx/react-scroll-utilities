@@ -76,36 +76,38 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 	startIndex = Math.max(startIndex! ?? 0, 0);
 	endIndex = Math.min(endIndex! ?? items.length - 1, items.length - 1);
 
-	// force a rerender when the container size changes
 	useLayoutEffect(() => {
 		const containerElement = containerElementRef.current;
-
 		if (!ResizeObserver || !containerElement) {
 			return;
 		}
 
-		const resizeObserver = new ResizeObserver((entries) => {
-			for (const entry of entries) {
-				if (entry.target === containerElement) {
-					containerSizeRef.current = entry.contentRect.height;
-					forceUpdate();
-					return;
-				}
-
-				// @ts-ignore
-				const index: number = entry.target[IndexSymbol];
-
-				if (itemElementsSizesRef.current[index] !== entry.contentRect.height) {
-					itemElementsSizesRef.current[index] = entry.contentRect.height;
-					forceUpdate();
-				}
+		const handleResizeObserverContainerEntry = (entry: ResizeObserverEntry) => {
+			if (containerSizeRef.current !== entry.contentRect.height) {
+				containerSizeRef.current = entry.contentRect.height;
+				forceUpdate();
 			}
-		});
+		};
 
-		resizeObserverRef.current = resizeObserver;
+		const handleResizeObserverItemEntry = (entry: ResizeObserverEntry) => {
+			// @ts-ignore
+			const index: number = entry.target[IndexSymbol];
 
-		resizeObserver.observe(containerElement);
-		return () => resizeObserver.disconnect();
+			if (itemElementsSizesRef.current[index] !== entry.contentRect.height) {
+				itemElementsSizesRef.current[index] = entry.contentRect.height;
+				forceUpdate();
+			}
+		};
+
+		const handleResizeObserverEntry = (entry: ResizeObserverEntry) =>
+			entry.target === containerElement
+				? handleResizeObserverContainerEntry(entry)
+				: handleResizeObserverItemEntry(entry);
+
+		resizeObserverRef.current = new ResizeObserver((entries) => entries.forEach(handleResizeObserverEntry));
+		resizeObserverRef.current.observe(containerElement);
+
+		return () => resizeObserverRef.current?.disconnect();
 	}, [ResizeObserver, forceUpdate]);
 
 	const virtualItemsContainerProps = {

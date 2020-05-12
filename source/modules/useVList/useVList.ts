@@ -12,7 +12,7 @@ const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VListOptions["getItemEstimatedSize"] = ge
 const DEFAULT_GET_ITEM_KEY: VListOptions["getItemKey"] = (_, index) => index;
 const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VListOptions["initialItemEstimatedSize"] = 50;
 const DEFAULT_ORIENTATION: VListOptions["orientation"] = "vertical";
-const DEFAULT_OVERSCAN: VListOptions["overscan"] = 0;
+const DEFAULT_OVERSCAN: VListOptions["overscan"] = 10;
 
 export const IndexSymbol = Symbol();
 

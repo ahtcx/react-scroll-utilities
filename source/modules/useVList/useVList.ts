@@ -12,7 +12,7 @@ const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VListOptions["getItemEstimatedSize"] = ge
 const DEFAULT_GET_ITEM_KEY: VListOptions["getItemKey"] = (_, index) => index;
 const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VListOptions["initialItemEstimatedSize"] = 50;
 const DEFAULT_ORIENTATION: VListOptions["orientation"] = "vertical";
-const DEFAULT_OVERSCAN: VListOptions["overscan"] = 10;
+const DEFAULT_OVERSCAN: VListOptions["overscan"] = 0;
 
 export const IndexSymbol = Symbol();
 
@@ -40,8 +40,6 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 
 	const resizeObserverRef = useRef<ResizeObserver>();
 
-	const renderedRangeRef = useRef([0, 0] as const);
-
 	const containerElementRef = useRef<MaybeElement<ContainerElement>>(null);
 	const containerSizeRef = useRef(0);
 	const containerScrollOffsetRef = useRef(0);
@@ -67,7 +65,7 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			if (startIndex === undefined && containerCurrentOffset > containerScrollOffset - overscan) {
 				startIndex = currentIndex - 1;
 			}
-			if (endIndex === undefined && containerCurrentOffset > containerScrollOffset + containerSize + overscan) {
+			if (endIndex === undefined && containerCurrentOffset >= containerScrollOffset + containerSize + overscan) {
 				endIndex = currentIndex - 1;
 			}
 
@@ -119,28 +117,14 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			const newScrollTop = event.currentTarget.scrollTop;
 			containerScrollOffsetRef.current = newScrollTop;
 
-			console.log(
-				newScrollTop,
-				itemElementsOffsetsRef.current.slice(startIndex, endIndex + 2),
-				itemElementsOffsetsRef.current[startIndex],
-				itemElementsOffsetsRef.current[endIndex]
-			);
-			// TODO: only update when start and index change
 			if (
 				(newScrollTop > currentScrollTop &&
 					(newScrollTop >= itemElementsOffsetsRef.current[startIndex + 1] ||
-						newScrollTop < itemElementsOffsetsRef.current[startIndex])) ||
+						itemElementsOffsetsRef.current[endIndex + 1] - containerSizeRef.current - newScrollTop < 0)) ||
 				(newScrollTop < currentScrollTop &&
-					(newScrollTop >= itemElementsOffsetsRef.current[endIndex + 1] ||
-						newScrollTop < itemElementsOffsetsRef.current[endIndex]))
+					(newScrollTop < itemElementsOffsetsRef.current[startIndex] ||
+						itemElementsOffsetsRef.current[endIndex] - containerSizeRef.current - newScrollTop >= 0))
 			) {
-				console.log(
-					newScrollTop >= itemElementsOffsetsRef.current[startIndex + 1],
-					newScrollTop < itemElementsOffsetsRef.current[startIndex],
-					newScrollTop >= itemElementsOffsetsRef.current[endIndex + 1],
-					newScrollTop < itemElementsOffsetsRef.current[endIndex]
-				);
-				console.log("update", {});
 				forceUpdate();
 			}
 		},
@@ -154,14 +138,13 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			const itemElements = itemElementsRef.current;
 			const resizeObserver = resizeObserverRef.current;
 
-			// unobserve the previous item element if it exists
 			const previousItemElement = itemElements[offsetIndex];
-			if (resizeObserver && previousItemElement) {
+
+			if (previousItemElement && resizeObserver) {
 				resizeObserver.unobserve(previousItemElement);
 			}
 
-			// observe the new item element if it exists and add it's index
-			if (resizeObserver && newItemElement) {
+			if (newItemElement && resizeObserver) {
 				// @ts-ignore
 				newItemElement[IndexSymbol] = index;
 				resizeObserver.observe(newItemElement);

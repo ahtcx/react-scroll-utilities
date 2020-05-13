@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from "react";
 
 import { getArrayMean } from "../../utilities/getArrayMean";
 import { useForceUpdate } from "../../utilities/useForceUpdate";
+import { clamp } from "../../utilities/clamp";
 
 export type MaybeElement<T extends Element> = T | null;
 
@@ -114,7 +115,8 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 		ref: containerElementRef,
 		onScroll: (event: React.UIEvent<ContainerElement>) => {
 			const currentScrollTop = containerScrollOffsetRef.current;
-			const newScrollTop = event.currentTarget.scrollTop;
+			const newScrollTop = clamp(event.currentTarget.scrollTop, 0, scrollHeight);
+
 			containerScrollOffsetRef.current = newScrollTop;
 
 			if (

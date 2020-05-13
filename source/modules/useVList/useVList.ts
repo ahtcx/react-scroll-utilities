@@ -12,7 +12,7 @@ const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VListOptions["getItemEstimatedSize"] = ge
 const DEFAULT_GET_ITEM_KEY: VListOptions["getItemKey"] = (_, index) => index;
 const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VListOptions["initialItemEstimatedSize"] = 50;
 const DEFAULT_ORIENTATION: VListOptions["orientation"] = "vertical";
-const DEFAULT_OVERSCAN: VListOptions["overscan"] = 10;
+const DEFAULT_OVERSCAN: VListOptions["overscan"] = 0;
 
 export const IndexSymbol = Symbol();
 
@@ -62,7 +62,7 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			const containerScrollOffset = containerScrollOffsetRef.current;
 			const containerCurrentOffset = currentIndex ? previousValue + getItemSize(currentIndex - 1) : 0;
 
-			if (startIndex === undefined && containerCurrentOffset > containerScrollOffset - overscan) {
+			if (startIndex === undefined && containerCurrentOffset > Math.max(0, containerScrollOffset - overscan)) {
 				startIndex = currentIndex - 1;
 			}
 			if (endIndex === undefined && containerCurrentOffset >= containerScrollOffset + containerSize + overscan) {
@@ -155,24 +155,21 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			itemElementsRef.current = itemElements.filter(Boolean);
 		};
 
-		const style: React.CSSProperties = {};
-		if (index === startIndex) {
-			style.marginTop = getItemOffset(index);
-		}
-		if (index === endIndex) {
-			style.marginBottom = scrollHeight - getItemOffset(index) - getItemSize(index);
-		}
-
 		return {
 			index,
 			item,
 			ref,
 			key: getItemKey(item, index),
-			style,
+			// style,
 		} as const;
 	});
 
+	const style: React.CSSProperties = {
+		paddingTop: getItemOffset(startIndex),
+		paddingBottom: scrollHeight - getItemOffset(endIndex) - getItemSize(endIndex),
+	};
+
 	const helpers = { getItemOffset, getItemSize };
 
-	return [virtualItemsContainerProps, virtualItems, helpers] as const;
+	return [virtualItemsContainerProps, style, virtualItems, helpers] as const;
 };

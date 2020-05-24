@@ -13,7 +13,7 @@ export const VList: React.FC = () => {
 		<div ref={ref} onScroll={onScroll} style={{ overflowY: "auto", height: 250 }}>
 			<div style={style}>
 				{virtualItems.map(({ ref, key, item, index }) => (
-					<div ref={ref} key={key} style={{ backgroundColor: index % 2 ? "#eee" : undefined }}>
+					<div ref={ref} key={key}>
 						item <span style={{ fontSize: 32 }}>{item}</span>
 						<div>offset: {getItemOffset(index)}</div>
 						<div>size: {getItemSize(index)}</div>

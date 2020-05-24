@@ -1,7 +1,7 @@
 module.exports = {
 	title: "react-list-utilities",
 	tagline: "Toolset for doing lists properly",
-	url: "https://vlist.aht.cx",
+	url: "https://react-list-utilities.aht.cx",
 	baseUrl: "/",
 	favicon: "img/favicon.ico",
 	organizationName: "ahtcx", // Usually your GitHub org/user name.

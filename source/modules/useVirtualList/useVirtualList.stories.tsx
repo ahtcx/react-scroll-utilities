@@ -9,11 +9,11 @@ export default { title: "useVirtualList" };
 export const VirtualList: React.FC = () => {
 	const items = Array.from({ length: 20000 }, (_, index) => index);
 
-	const containerRef = useRef<HTMLDivElement>(null);
-	const [{ onScroll }, { style }, virtualItems] = useVirtualList(containerRef, items);
+	// const containerRef = useRef<HTMLDivElement>(null);
+	const [{ ref, onScroll }, { style }, virtualItems] = useVirtualList(items);
 
 	return (
-		<div ref={containerRef} onScroll={onScroll} style={{ overflowY: "auto", height: 250 }}>
+		<div ref={ref} onScroll={onScroll} style={{ overflowY: "auto", height: 250 }}>
 			<div style={style}>
 				{virtualItems.map(({ ref, key, item, offset, size }) => (
 					<div ref={ref} key={key}>

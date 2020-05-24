@@ -7,35 +7,34 @@ import { isTypeof } from "../../utilities/isTypeof";
 
 export type MaybeElement<T extends Element> = T | null;
 
-export type VirtualListOrientation = "horizontal" | "vertical";
-
 const DEFAULT_RESIZE_OBSERVER: VirtualListOptions["ResizeObserver"] = window.ResizeObserver;
 const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualListOptions["getItemEstimatedSize"] = getArrayMean;
 const DEFAULT_GET_ITEM_KEY: VirtualListOptions["getItemKey"] = (_, index) => index;
-const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualListOptions["initialItemEstimatedSize"] = 50;
-// const DEFAULT_ORIENTATION: VirtualListOptions["orientation"] = "vertical";
-const DEFAULT_OVERSCAN: VirtualListOptions["overscan"] = 0;
+const DEFAULT_INITIAL_CONTAINER_SIZE: VirtualListOptions["initialContainerSize"] = 0;
+const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualListOptions["initialItemEstimatedSize"] = 100;
+const DEFAULT_OVERSCAN: VirtualListOptions["overscan"] = 100;
 
 export const IndexSymbol = Symbol();
 
-export interface VirtualListOptions<T = any> {
+export interface VirtualListOptions<T = any, ContainerElement extends HTMLElement = any> {
 	readonly ResizeObserver?: typeof ResizeObserver;
+	readonly containerElementRef?: RefObject<ContainerElement>;
 	readonly getItemEstimatedSize?: (sizes: number[]) => number;
 	readonly getItemKey?: (item: T, index: number) => string | number;
+	readonly initialContainerSize?: number;
 	readonly initialItemEstimatedSize?: number;
-	// readonly orientation?: VirtualListOrientation;
 	readonly overscan?: number;
 }
 
-export const useVirtualList = <ContainerElement extends HTMLElement, T, ItemElement extends HTMLElement = any>(
-	containerElementRef: RefObject<ContainerElement>,
+export const useVirtualList = <T, ContainerElement extends HTMLElement, ItemElement extends HTMLElement = any>(
 	items: readonly T[],
 	{
 		ResizeObserver = DEFAULT_RESIZE_OBSERVER,
+		containerElementRef: passedContainerElementRef,
 		getItemEstimatedSize = DEFAULT_GET_ITEM_ESTIMATED_SIZE,
 		getItemKey = DEFAULT_GET_ITEM_KEY,
+		initialContainerSize = DEFAULT_INITIAL_CONTAINER_SIZE,
 		initialItemEstimatedSize = DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE,
-		// orientation = DEFAULT_ORIENTATION,
 		overscan = DEFAULT_OVERSCAN,
 	}: VirtualListOptions<T> = {}
 ) => {
@@ -43,11 +42,13 @@ export const useVirtualList = <ContainerElement extends HTMLElement, T, ItemElem
 
 	const resizeObserverRef = useRef<ResizeObserver>();
 
-	const containerSizeRef = useRef(0);
+	const defaultContainerElementRef = useRef<ContainerElement>(null);
+	const containerElementRef = passedContainerElementRef ?? defaultContainerElementRef;
+	const containerSizeRef = useRef(initialContainerSize);
 	const containerScrollOffsetRef = useRef(0);
 
 	const itemElementsRef = useRef<MaybeElement<ItemElement>[]>([]);
-	// TODO: these aren't correctly typed as number | undefined, should they be?
+	// TODO: these aren't correctly typed as (number | undefined)[]
 	const itemElementsOffsetsRef = useRef<number[]>(Array.from({ length: items.length }));
 	const itemElementsSizesRef = useRef<number[]>(Array.from({ length: items.length }));
 
@@ -115,6 +116,7 @@ export const useVirtualList = <ContainerElement extends HTMLElement, T, ItemElem
 	}, [ResizeObserver, containerElementRef, forceUpdate]);
 
 	const containerProps = {
+		ref: containerElementRef,
 		onScroll: (event: React.UIEvent<ContainerElement>) => {
 			const currentScrollTop = containerScrollOffsetRef.current;
 			const newScrollTop = clamp(event.currentTarget.scrollTop, 0, scrollHeight);
@@ -131,6 +133,9 @@ export const useVirtualList = <ContainerElement extends HTMLElement, T, ItemElem
 			) {
 				forceUpdate();
 			}
+		},
+		style: {
+			overflowY: "auto",
 		},
 	};
 

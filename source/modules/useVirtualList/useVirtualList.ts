@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, RefObject } from "react";
 
 import { getArrayMean } from "../../utilities/getArrayMean";
 import { useForceUpdate } from "../../utilities/useForceUpdate";
@@ -6,42 +6,42 @@ import { clamp } from "../../utilities/clamp";
 
 export type MaybeElement<T extends Element> = T | null;
 
-export type VListOrientation = "horizontal" | "vertical";
+export type VirtualListOrientation = "horizontal" | "vertical";
 
-const DEFAULT_RESIZE_OBSERVER: VListOptions["ResizeObserver"] = window.ResizeObserver;
-const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VListOptions["getItemEstimatedSize"] = getArrayMean;
-const DEFAULT_GET_ITEM_KEY: VListOptions["getItemKey"] = (_, index) => index;
-const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VListOptions["initialItemEstimatedSize"] = 50;
-const DEFAULT_ORIENTATION: VListOptions["orientation"] = "vertical";
-const DEFAULT_OVERSCAN: VListOptions["overscan"] = 0;
+const DEFAULT_RESIZE_OBSERVER: VirtualListOptions["ResizeObserver"] = window.ResizeObserver;
+const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualListOptions["getItemEstimatedSize"] = getArrayMean;
+const DEFAULT_GET_ITEM_KEY: VirtualListOptions["getItemKey"] = (_, index) => index;
+const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualListOptions["initialItemEstimatedSize"] = 50;
+// const DEFAULT_ORIENTATION: VirtualListOptions["orientation"] = "vertical";
+const DEFAULT_OVERSCAN: VirtualListOptions["overscan"] = 0;
 
 export const IndexSymbol = Symbol();
 
-export interface VListOptions<T = any> {
+export interface VirtualListOptions<T = any> {
 	readonly ResizeObserver?: typeof ResizeObserver;
 	readonly getItemEstimatedSize?: (sizes: number[]) => number;
 	readonly getItemKey?: (item: T, index: number) => string | number;
 	readonly initialItemEstimatedSize?: number;
-	readonly orientation?: VListOrientation;
+	// readonly orientation?: VirtualListOrientation;
 	readonly overscan?: number;
 }
 
-export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElement extends HTMLElement = any>(
+export const useVirtualList = <ContainerElement extends HTMLElement, T, ItemElement extends HTMLElement = any>(
+	containerElementRef: RefObject<ContainerElement>,
 	items: readonly T[],
 	{
 		ResizeObserver = DEFAULT_RESIZE_OBSERVER,
 		getItemEstimatedSize = DEFAULT_GET_ITEM_ESTIMATED_SIZE,
 		getItemKey = DEFAULT_GET_ITEM_KEY,
 		initialItemEstimatedSize = DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE,
-		orientation = DEFAULT_ORIENTATION,
+		// orientation = DEFAULT_ORIENTATION,
 		overscan = DEFAULT_OVERSCAN,
-	}: VListOptions<T> = {}
+	}: VirtualListOptions<T> = {}
 ) => {
 	const forceUpdate = useForceUpdate();
 
 	const resizeObserverRef = useRef<ResizeObserver>();
 
-	const containerElementRef = useRef<MaybeElement<ContainerElement>>(null);
 	const containerSizeRef = useRef(0);
 	const containerScrollOffsetRef = useRef(0);
 
@@ -109,10 +109,9 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 		resizeObserverRef.current.observe(containerElement);
 
 		return () => resizeObserverRef.current?.disconnect();
-	}, [ResizeObserver, forceUpdate]);
+	}, [ResizeObserver, containerElementRef, forceUpdate]);
 
-	const virtualItemsContainerProps = {
-		ref: containerElementRef,
+	const containerProps = {
 		onScroll: (event: React.UIEvent<ContainerElement>) => {
 			const currentScrollTop = containerScrollOffsetRef.current;
 			const newScrollTop = clamp(event.currentTarget.scrollTop, 0, scrollHeight);
@@ -129,6 +128,13 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			) {
 				forceUpdate();
 			}
+		},
+	};
+
+	const wrapperProps = {
+		style: {
+			paddingTop: getItemOffset(startIndex),
+			paddingBottom: scrollHeight - getItemOffset(endIndex) - getItemSize(endIndex),
 		},
 	};
 
@@ -162,16 +168,12 @@ export const useVList = <T, ContainerElement extends HTMLElement = any, ItemElem
 			item,
 			ref,
 			key: getItemKey(item, index),
-			// style,
+			offset: getItemOffset(index),
+			size: getItemSize(index),
 		} as const;
 	});
 
-	const style: React.CSSProperties = {
-		paddingTop: getItemOffset(startIndex),
-		paddingBottom: scrollHeight - getItemOffset(endIndex) - getItemSize(endIndex),
-	};
-
 	const helpers = { getItemOffset, getItemSize };
 
-	return [virtualItemsContainerProps, style, virtualItems, helpers] as const;
+	return [containerProps, wrapperProps, virtualItems, helpers] as const;
 };

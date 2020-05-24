@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, RefObject } from "react";
 import { getArrayMean } from "../../utilities/getArrayMean";
 import { useForceUpdate } from "../../utilities/useForceUpdate";
 import { clamp } from "../../utilities/clamp";
+import { isTypeof } from "../../utilities/isTypeof";
 
 export type MaybeElement<T extends Element> = T | null;
 
@@ -46,10 +47,12 @@ export const useVirtualList = <ContainerElement extends HTMLElement, T, ItemElem
 	const containerScrollOffsetRef = useRef(0);
 
 	const itemElementsRef = useRef<MaybeElement<ItemElement>[]>([]);
+	// TODO: these aren't correctly typed as number | undefined, should they be?
 	const itemElementsOffsetsRef = useRef<number[]>(Array.from({ length: items.length }));
 	const itemElementsSizesRef = useRef<number[]>(Array.from({ length: items.length }));
 
-	const itemEstimatedSize = getItemEstimatedSize(itemElementsSizesRef.current) || initialItemEstimatedSize;
+	const itemEstimatedSize =
+		getItemEstimatedSize(itemElementsSizesRef.current.filter(isTypeof("number"))) || initialItemEstimatedSize;
 
 	const getItemSize = (index: number) => itemElementsSizesRef.current[index] ?? itemEstimatedSize;
 	const getItemOffset = (index: number) => itemElementsOffsetsRef.current[index];

@@ -1,11 +1,11 @@
 import { useLayoutEffect, useRef, RefObject } from "react";
 
-import { getArrayMean } from "../../utilities/getArrayMean";
-import { useForceUpdate } from "../../utilities/useForceUpdate";
 import { clamp } from "../../utilities/clamp";
+import { getArrayMean } from "../../utilities/getArrayMean";
 import { isTypeof } from "../../utilities/isTypeof";
+import { useForceUpdate } from "../../utilities/useForceUpdate";
 
-export type MaybeElement<T extends Element> = T | null;
+export type Maybe<T> = T | null;
 
 const DEFAULT_RESIZE_OBSERVER: VirtualListOptions["ResizeObserver"] = window.ResizeObserver;
 const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualListOptions["getItemEstimatedSize"] = getArrayMean;
@@ -26,7 +26,7 @@ export interface VirtualListOptions<T = any, ContainerElement extends HTMLElemen
 	readonly overscan?: number;
 }
 
-export const useVirtualList = <T, ContainerElement extends HTMLElement, ItemElement extends HTMLElement = any>(
+export const useVirtualList = <T, ContainerElement extends HTMLElement = any, ItemElement extends HTMLElement = any>(
 	items: readonly T[],
 	{
 		ResizeObserver = DEFAULT_RESIZE_OBSERVER,
@@ -36,7 +36,7 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement, ItemElem
 		initialContainerSize = DEFAULT_INITIAL_CONTAINER_SIZE,
 		initialItemEstimatedSize = DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE,
 		overscan = DEFAULT_OVERSCAN,
-	}: VirtualListOptions<T> = {}
+	}: VirtualListOptions<T, ContainerElement> = {}
 ) => {
 	const forceUpdate = useForceUpdate();
 
@@ -47,7 +47,7 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement, ItemElem
 	const containerSizeRef = useRef(initialContainerSize);
 	const containerScrollOffsetRef = useRef(0);
 
-	const itemElementsRef = useRef<MaybeElement<ItemElement>[]>([]);
+	const itemElementsRef = useRef<Maybe<ItemElement>[]>([]);
 	// TODO: these aren't correctly typed as (number | undefined)[]
 	const itemElementsOffsetsRef = useRef<number[]>(Array.from({ length: items.length }));
 	const itemElementsSizesRef = useRef<number[]>(Array.from({ length: items.length }));

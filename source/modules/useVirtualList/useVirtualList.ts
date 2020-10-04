@@ -139,13 +139,6 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 		},
 	};
 
-	const wrapperProps = {
-		style: {
-			paddingTop: getItemOffset(startIndex),
-			paddingBottom: scrollHeight - getItemOffset(endIndex) - getItemSize(endIndex),
-		},
-	};
-
 	// subset of passed items to be displayed
 	const virtualItems = items.slice(startIndex, endIndex + 1).map((item, offsetIndex) => {
 		const index = startIndex + offsetIndex;
@@ -171,10 +164,19 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 			itemElementsRef.current = itemElements.filter(Boolean);
 		};
 
+		const style: React.CSSProperties = {};
+		if (index === startIndex) {
+			style.marginTop = getItemOffset(startIndex);
+		}
+		if (index === endIndex) {
+			style.marginBottom = scrollHeight - getItemOffset(endIndex) - getItemSize(endIndex);
+		}
+
 		return {
 			index,
 			item,
 			ref,
+			style,
 			key: getItemKey(item, index),
 			offset: getItemOffset(index),
 			size: getItemSize(index),
@@ -183,5 +185,5 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 
 	const helpers = { getItemOffset, getItemSize };
 
-	return [containerProps, wrapperProps, virtualItems, helpers] as const;
+	return [containerProps, virtualItems, helpers] as const;
 };

@@ -1,15 +1,15 @@
 module.exports = {
-	title: "react-list-utilities",
-	tagline: "Toolset for doing lists properly",
-	url: "https://react-list-utilities.aht.cx",
+	title: "Listilities",
+	tagline: "Utilities for doing lists properly",
+	url: "https://listilities.aht.cx",
 	baseUrl: "/",
 	favicon: "img/favicon.ico",
 	organizationName: "ahtcx", // Usually your GitHub org/user name.
-	projectName: "vlist", // Usually your repo name.
+	projectName: "listilities", // Usually your repo name.
 	themes: ["@docusaurus/theme-live-codeblock"],
 	themeConfig: {
 		navbar: {
-			title: "react-list-utilities",
+			title: "Listilities",
 			logo: {
 				alt: "My Site Logo",
 				src: "img/logo.svg",

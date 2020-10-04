@@ -2,9 +2,9 @@ import * as React from "react";
 
 import { useVirtualizedList } from "./useVirtualizedList";
 
-export default { title: "useVirtualList" };
+export default { title: "useVirtualizedList" };
 
-export const VirtualList: React.FC = () => {
+export const VirtualizedList: React.FC = () => {
 	const items = Array.from({ length: 20000 }, (_, index) => index);
 
 	const [{ ref, onScroll }, virtualItems] = useVirtualizedList(items);

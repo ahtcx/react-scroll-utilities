@@ -1,13 +1,13 @@
 import * as React from "react";
 
-import { useVirtualList } from "./useVirtualList";
+import { useVirtualizedList } from "./useVirtualizedList";
 
 export default { title: "useVirtualList" };
 
 export const VirtualList: React.FC = () => {
 	const items = Array.from({ length: 20000 }, (_, index) => index);
 
-	const [{ ref, onScroll }, virtualItems] = useVirtualList(items);
+	const [{ ref, onScroll }, virtualItems] = useVirtualizedList(items);
 
 	return (
 		<div ref={ref} onScroll={onScroll} style={{ overflowY: "auto", height: 250 }}>

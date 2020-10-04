@@ -1,22 +1,22 @@
 import { useLayoutEffect, useRef, RefObject } from "react";
 
-import { clamp } from "../../utilities/clamp";
-import { getArrayMean } from "../../utilities/getArrayMean";
-import { isTypeof } from "../../utilities/isTypeof";
-import { useForceUpdate } from "../../utilities/useForceUpdate";
+import { clamp } from "../utilities/clamp";
+import { getArrayMean } from "../utilities/getArrayMean";
+import { isTypeof } from "../utilities/isTypeof";
+import { useForceUpdate } from "../utilities/useForceUpdate";
 
 export type Maybe<T> = T | null;
 
-const DEFAULT_RESIZE_OBSERVER: VirtualListOptions["ResizeObserver"] = window.ResizeObserver;
-const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualListOptions["getItemEstimatedSize"] = getArrayMean;
-const DEFAULT_GET_ITEM_KEY: VirtualListOptions["getItemKey"] = (_, index) => index;
-const DEFAULT_INITIAL_CONTAINER_SIZE: VirtualListOptions["initialContainerSize"] = 0;
-const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualListOptions["initialItemEstimatedSize"] = 100;
-const DEFAULT_OVERSCAN: VirtualListOptions["overscan"] = 100;
+const DEFAULT_RESIZE_OBSERVER: VirtualizedListOptions["ResizeObserver"] = window.ResizeObserver;
+const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualizedListOptions["getItemEstimatedSize"] = getArrayMean;
+const DEFAULT_GET_ITEM_KEY: VirtualizedListOptions["getItemKey"] = (_, index) => index;
+const DEFAULT_INITIAL_CONTAINER_SIZE: VirtualizedListOptions["initialContainerSize"] = 0;
+const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualizedListOptions["initialItemEstimatedSize"] = 100;
+const DEFAULT_OVERSCAN: VirtualizedListOptions["overscan"] = 100;
 
 export const IndexSymbol = Symbol();
 
-export interface VirtualListOptions<T = any, ContainerElement extends HTMLElement = any> {
+export interface VirtualizedListOptions<T = any, ContainerElement extends HTMLElement = any> {
 	readonly ResizeObserver?: typeof ResizeObserver;
 	readonly containerElementRef?: RefObject<ContainerElement>;
 	readonly getItemEstimatedSize?: (sizes: number[]) => number;
@@ -26,7 +26,11 @@ export interface VirtualListOptions<T = any, ContainerElement extends HTMLElemen
 	readonly overscan?: number;
 }
 
-export const useVirtualList = <T, ContainerElement extends HTMLElement = any, ItemElement extends HTMLElement = any>(
+export const useVirtualizedList = <
+	T,
+	ContainerElement extends HTMLElement = any,
+	ItemElement extends HTMLElement = any
+>(
 	items: readonly T[],
 	{
 		ResizeObserver = DEFAULT_RESIZE_OBSERVER,
@@ -36,7 +40,7 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 		initialContainerSize = DEFAULT_INITIAL_CONTAINER_SIZE,
 		initialItemEstimatedSize = DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE,
 		overscan = DEFAULT_OVERSCAN,
-	}: VirtualListOptions<T, ContainerElement> = {}
+	}: VirtualizedListOptions<T, ContainerElement> = {}
 ) => {
 	const forceUpdate = useForceUpdate();
 
@@ -180,7 +184,7 @@ export const useVirtualList = <T, ContainerElement extends HTMLElement = any, It
 			key: getItemKey(item, index),
 			offset: getItemOffset(index),
 			size: getItemSize(index),
-		} as const;
+		};
 	});
 
 	const helpers = { getItemOffset, getItemSize };

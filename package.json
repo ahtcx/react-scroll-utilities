@@ -1,8 +1,8 @@
 {
-	"name": "listilities",
+	"name": "react-list-utilities",
 	"version": "0.0.0",
 	"main": "index.js",
-	"repository": "git@github.com:ahtcx/vlist.git",
+	"repository": "git@github.com:ahtcx/react-list-utilities.git",
 	"author": "Alexandre Hitchcox <alexandre@hitchcox.me>",
 	"license": "MIT",
 	"scripts": {

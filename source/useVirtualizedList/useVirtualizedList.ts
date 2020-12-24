@@ -2,6 +2,7 @@ import { RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } 
 
 import { getArrayMean } from "../utilities/getArrayMean";
 import { isTypeof } from "../utilities/isTypeof";
+import { replaceNaNWithUndefined } from "../utilities/replaceNaNWithUndefined";
 import { useForceUpdate } from "../utilities/useForceUpdate";
 
 export type Maybe<T> = T | null;
@@ -10,19 +11,19 @@ const DEFAULT_RESIZE_OBSERVER: VirtualizedListOptions["ResizeObserver"] = window
 const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualizedListOptions["getItemEstimatedSize"] = getArrayMean;
 const DEFAULT_GET_ITEM_KEY: VirtualizedListOptions["getItemKey"] = (_, index) => index;
 const DEFAULT_INITIAL_CONTAINER_SIZE: VirtualizedListOptions["initialContainerSize"] = 0;
-const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualizedListOptions["initialItemEstimatedSize"] = 100;
-const DEFAULT_OVERSCAN: VirtualizedListOptions["overscan"] = 100;
+const DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE: VirtualizedListOptions["initialItemEstimatedSize"] = 50;
+const DEFAULT_OVERSCAN: VirtualizedListOptions["overscan"] = 50;
 
 export const IndexSymbol = Symbol();
 
-export interface VirtualizedListOptions<T = any, ContainerElement extends HTMLElement = any> {
-	readonly ResizeObserver?: typeof ResizeObserver;
-	readonly containerElementRef?: RefObject<ContainerElement>;
-	readonly getItemEstimatedSize?: (sizes: number[]) => number;
-	readonly getItemKey?: (item: T, index: number) => string | number;
-	readonly initialContainerSize?: number;
-	readonly initialItemEstimatedSize?: number;
-	readonly overscan?: number;
+export interface VirtualizedListOptions<Item = any, ContainerElement extends HTMLElement = any> {
+	ResizeObserver?: typeof ResizeObserver;
+	containerElementRef?: RefObject<ContainerElement>;
+	getItemEstimatedSize?: (sizes: number[]) => number;
+	getItemKey?: (item: Item, index: number) => string | number;
+	initialContainerSize?: number;
+	initialItemEstimatedSize?: number;
+	overscan?: number;
 }
 
 export const useVirtualizedList = <
@@ -30,7 +31,7 @@ export const useVirtualizedList = <
 	ContainerElement extends HTMLElement = any,
 	ItemElement extends HTMLElement = any
 >(
-	items: readonly Item[],
+	items: Item[],
 	{
 		ResizeObserver = DEFAULT_RESIZE_OBSERVER,
 		containerElementRef: passedContainerElementRef,
@@ -48,10 +49,6 @@ export const useVirtualizedList = <
 	const defaultContainerElementRef = useRef<ContainerElement>(null);
 	const containerElementRef = passedContainerElementRef ?? defaultContainerElementRef;
 
-	const [startIndex, setStartIndex] = useState<number>();
-	const [endIndex, setEndIndex] = useState<number>();
-	const [scrollHeight, setScrollHeight] = useState(0);
-
 	const itemElementsRef = useRef<Maybe<ItemElement>[]>([]);
 
 	const itemOffsetsRef = useRef<(number | undefined)[]>(Array.from({ length: items.length }));
@@ -60,7 +57,14 @@ export const useVirtualizedList = <
 		/**
 		 * @param index Item index.
 		 */
-		(index: number) => itemOffsetsRef.current[index],
+		(index: number) => {
+			const itemOffset = itemOffsetsRef.current[index];
+			if (isNaN(itemOffset!)) {
+				return undefined;
+			}
+
+			return itemOffset;
+		},
 		[]
 	);
 	/** Set item element's offset relative to list start in pixels. */
@@ -81,7 +85,14 @@ export const useVirtualizedList = <
 		/**
 		 * @param index Item index.
 		 */
-		(index: number) => itemSizesRef.current[index],
+		(index: number) => {
+			const itemSize = itemSizesRef.current[index];
+			if (isNaN(itemSize!)) {
+				return undefined;
+			}
+
+			return itemSize;
+		},
 		[]
 	);
 	/**
@@ -97,20 +108,21 @@ export const useVirtualizedList = <
 	);
 
 	const itemEstimatedSize =
-		getItemEstimatedSize(itemSizesRef.current.filter(isTypeof("number"))) ?? initialItemEstimatedSize;
+		replaceNaNWithUndefined(getItemEstimatedSize(itemSizesRef.current.filter(isTypeof("number")))) ??
+		initialItemEstimatedSize;
 
-	/** Calculate and update current values. */
-	const calculateAndUpdateCurrentValues = useCallback(() => {
+	/** Calculate current values. */
+	const calculateCurrentValues = useCallback(() => {
 		let newStartIndex: number;
 		let newEndIndex: number;
 
 		const containerSize = containerElementRef.current?.clientHeight ?? initialContainerSize;
 		const containerScrollOffset = containerElementRef.current?.scrollTop ?? 0;
 
-		setScrollHeight(
-			itemOffsetsRef.current.reduce((previousValue, _, currentIndex) => {
+		const newScrollHeight =
+			itemOffsetsRef.current.reduce<number>((previousValue, _, currentIndex) => {
 				const containerCurrentOffset = currentIndex
-					? (previousValue ?? 0) + (getItemSize(currentIndex - 1) ?? itemEstimatedSize)
+					? previousValue + (getItemSize(currentIndex - 1) || itemEstimatedSize)
 					: 0;
 
 				if (newStartIndex === undefined && containerCurrentOffset > Math.max(0, containerScrollOffset - overscan)) {
@@ -122,11 +134,12 @@ export const useVirtualizedList = <
 
 				setItemOffset(currentIndex, containerCurrentOffset);
 				return containerCurrentOffset;
-			}, 0) ?? 0 + (getItemSize(itemSizesRef.current.length - 1) ?? itemEstimatedSize)
-		);
+			}, 0) + (getItemSize(itemSizesRef.current.length - 1) || itemEstimatedSize);
 
-		setStartIndex(Math.max(newStartIndex! ?? 0, 0));
-		setEndIndex(Math.min(newEndIndex! ?? items.length - 1, items.length - 1));
+		newStartIndex = Math.max(newStartIndex! ?? 0, 0);
+		newEndIndex = Math.min(newEndIndex! ?? items.length - 1, items.length - 1);
+
+		return { newStartIndex, newEndIndex, newScrollHeight };
 	}, [
 		containerElementRef,
 		getItemSize,
@@ -136,6 +149,20 @@ export const useVirtualizedList = <
 		overscan,
 		setItemOffset,
 	]);
+
+	const currentValues = calculateCurrentValues();
+
+	const [startIndex, setStartIndex] = useState(currentValues.newStartIndex);
+	const [endIndex, setEndIndex] = useState(currentValues.newEndIndex);
+	const [scrollHeight, setScrollHeight] = useState(currentValues.newScrollHeight);
+
+	const calculateAndUpdateCurrentValues = useCallback(() => {
+		const { newStartIndex, newEndIndex, newScrollHeight } = calculateCurrentValues();
+
+		setStartIndex(newStartIndex);
+		setEndIndex(newEndIndex);
+		setScrollHeight(newScrollHeight);
+	}, [calculateCurrentValues]);
 
 	useEffect(() => {
 		calculateAndUpdateCurrentValues();
@@ -149,6 +176,7 @@ export const useVirtualizedList = <
 		}
 
 		const handleResizeObserverContainerEntry = (entry: ResizeObserverEntry) => {
+			// calculateAndUpdateCurrentValues();
 			forceUpdate();
 		};
 
@@ -158,7 +186,7 @@ export const useVirtualizedList = <
 
 			if (getItemSize(index) !== entry.contentRect.height) {
 				setItemSize(index, entry.contentRect.height);
-				// forceUpdate();
+				calculateAndUpdateCurrentValues();
 			}
 		};
 
@@ -167,28 +195,17 @@ export const useVirtualizedList = <
 				? handleResizeObserverContainerEntry(entry)
 				: handleResizeObserverItemEntry(entry);
 
-		resizeObserverRef.current = new ResizeObserver((entries) => entries.forEach(handleResizeObserverEntry));
+		resizeObserverRef.current = new ResizeObserver((entries) => {
+			window.requestAnimationFrame(() => entries.forEach(handleResizeObserverEntry));
+		});
 		resizeObserverRef.current.observe(containerElement);
 
 		return () => resizeObserverRef.current?.disconnect();
-	}, [ResizeObserver, containerElementRef, forceUpdate, getItemSize, setItemSize]);
+	}, [ResizeObserver, containerElementRef, forceUpdate, getItemSize, setItemSize, calculateAndUpdateCurrentValues]);
 
 	const containerProps = {
 		ref: containerElementRef,
-		onScroll: (event: React.UIEvent<ContainerElement>) => {
-			// const currentScrollTop = containerScrollOffsetRef.current;
-			// const newScrollTop = clamp(event.currentTarget.scrollTop, 0, scrollHeight);
-			// containerScrollOffsetRef.current = newScrollTop;
-			// if (
-			// 	(newScrollTop > currentScrollTop &&
-			// 		(newScrollTop >= itemElementsOffsetsRef.current[startIndex + 1] ||
-			// 			itemElementsOffsetsRef.current[endIndex + 1] - containerSizeRef.current - newScrollTop < 0)) ||
-			// 	(newScrollTop < currentScrollTop &&
-			// 		(newScrollTop < itemElementsOffsetsRef.current[startIndex] ||
-			// 			itemElementsOffsetsRef.current[endIndex] - containerSizeRef.current - newScrollTop >= 0))
-			// ) {
-			// 	forceUpdate();
-			// }
+		onScroll: () => {
 			calculateAndUpdateCurrentValues();
 		},
 		style: {
@@ -197,8 +214,8 @@ export const useVirtualizedList = <
 	};
 
 	// subset of passed items to be displayed
-	const virtualItems = items.slice(startIndex, (endIndex ?? 0) + 1).map((item, offsetIndex) => {
-		const index = (startIndex ?? 0) + offsetIndex;
+	const virtualizedItems = items.slice(startIndex, endIndex + 1).map((item, offsetIndex) => {
+		const index = startIndex + offsetIndex;
 
 		const ref: React.RefCallback<ItemElement> = (newItemElement) => {
 			const itemElements = itemElementsRef.current;
@@ -240,13 +257,16 @@ export const useVirtualizedList = <
 		};
 	});
 
-	const helpers = { getItemOffset, getItemSize };
+	const helpers = {
+		/** Index of first virtualized item rendered. */
+		startIndex,
+		/** Index of last virtualized item rendered. */
+		endIndex,
+		/** Total scroll height. */
+		scrollHeight,
+		getItemOffset,
+		getItemSize,
+	};
 
-	useLayoutEffect(() => {
-		calculateAndUpdateCurrentValues();
-	}, [calculateAndUpdateCurrentValues]);
-
-	console.log({ startIndex, endIndex });
-
-	return [containerProps, virtualItems, helpers] as const;
+	return [containerProps, virtualizedItems, helpers] as const;
 };

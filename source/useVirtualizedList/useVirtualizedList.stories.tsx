@@ -5,9 +5,11 @@ import { useVirtualizedList } from "./useVirtualizedList";
 export default { title: "useVirtualizedList" };
 
 export const VirtualizedList: React.FC = () => {
-	const items = Array.from({ length: 10 }, (_, index) => index);
+	const items = Array.from({ length: 100 }, (_, index) => index);
 
-	const [{ ref, onScroll }, virtualItems] = useVirtualizedList(items);
+	const [{ ref, onScroll }, virtualItems, { startIndex, endIndex, scrollHeight }] = useVirtualizedList(items);
+
+	console.log({ startIndex, endIndex, scrollHeight });
 
 	return (
 		<div ref={ref} onScroll={onScroll} style={{ overflowY: "auto", height: 250 }}>

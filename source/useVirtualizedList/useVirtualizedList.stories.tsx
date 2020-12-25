@@ -5,7 +5,7 @@ import { useVirtualizedList } from "./useVirtualizedList";
 export default { title: "useVirtualizedList" };
 
 export const VirtualizedList: React.FC = () => {
-	const items = Array.from({ length: 1000 }, (_, index) => index);
+	const items = Array.from({ length: 10000 }, (_, index) => index);
 
 	const [{ ref, onScroll }, virtualItems, { getItemOffset, getItemSize }] = useVirtualizedList(items, { overscan: 0 });
 

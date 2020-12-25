@@ -10,10 +10,19 @@ import { useVirtualizedList } from "./useVirtualizedList.ts";
 
 <Playground scope={{ useVirtualizedList }}>
 	{() => {
-		const items = Array.from({ length: 100 }, (_, index) => index);
-		const [{ ref, onScroll }, virtualItems] = useVirtualizedList(items);
+		const length = 100;
+		const height = 250;
+		const overscan = 50;
+		//
+		const items = Array.from({ length }, (_, index) => index);
+		//
+		const [{ ref, onScroll }, virtualItems] = useVirtualizedList(items, {
+			initialContainerSize: height,
+			overscan,
+		});
+		//
 		return (
-			<div ref={ref} onScroll={onScroll} style={{ overflowY: "auto", height: 250 }}>
+			<div ref={ref} onScroll={onScroll} style={{ overflowY: "auto", height }}>
 				{virtualItems.map(({ ref, key, item, style }) => (
 					<div ref={ref} key={key} style={style}>
 						item <span style={{ fontSize: 32 }}>{item}</span>

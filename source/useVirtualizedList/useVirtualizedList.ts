@@ -7,7 +7,8 @@ import { replaceNaNWithUndefined } from "../utilities/replaceNaNWithUndefined";
 
 export type Maybe<T> = T | null;
 
-const DEFAULT_RESIZE_OBSERVER: VirtualizedListOptions["ResizeObserver"] = window.ResizeObserver;
+const DEFAULT_RESIZE_OBSERVER: VirtualizedListOptions["ResizeObserver"] =
+	typeof window === "undefined" ? undefined : window.ResizeObserver;
 const DEFAULT_GET_ITEM_ESTIMATED_SIZE: VirtualizedListOptions["getItemEstimatedSize"] = getArrayMean;
 const DEFAULT_GET_ITEM_KEY: VirtualizedListOptions["getItemKey"] = (_, index) => index;
 const DEFAULT_INITIAL_CONTAINER_SIZE: VirtualizedListOptions["initialContainerSize"] = 0;
@@ -218,9 +219,6 @@ export const useVirtualizedList = <
 				calculateAndUpdateCurrentValues();
 			}
 		},
-		style: {
-			overflowY: "auto",
-		},
 	};
 
 	// subset of passed items to be displayed
@@ -251,8 +249,7 @@ export const useVirtualizedList = <
 		const style = {
 			marginTop: index === startIndex ? getItemOffset(startIndex) : undefined,
 			marginBottom: index === endIndex ? scrollHeight - getItemOffset(endIndex) - getItemSize(endIndex) : undefined,
-			pointerEvents: "none",
-		} as const;
+		};
 
 		return {
 			index,

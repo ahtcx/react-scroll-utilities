@@ -15,16 +15,20 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install packages
-        run: cd documentation && yarn install
-      - name: Deploy to GitHub pages
+      - name: Install dependencies
+        run: yarn install
+      - name: Build documentation
+        run: yarn docz build
+      - name: Deploy documentation to GitHub pages
         env:
           GH_NAME: "ahtcx"
           GH_EMAIL: "alexandre@hitchcox.me"
         run: |
-          cd documentation
           export GIT_USER="$GH_NAME"
-          git config --global user.name "${GH_NAME}"
-          git config --global user.email "${GH_EMAIL}"
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@bots.github.com"
           echo "machine github.com login ${GH_NAME} password ${{ secrets.GITHUB_TOKEN }}" > ~/.netrc
-          yarn deploy
+
+          git checkout gh-pages
+
+          git add .docz/dist

@@ -1,0 +1,25 @@
+---
+name: useVirtualizedList hook
+route: /hooks/useVirtualizedList
+---
+
+import { Playground } from "docz";
+import { useVirtualizedList } from "./useVirtualizedList.ts";
+
+## Playground
+
+<Playground scope={{ useVirtualizedList }}>
+	{() => {
+		const items = Array.from({ length: 100 }, (_, index) => index);
+		const [{ ref, onScroll }, virtualItems] = useVirtualizedList(items);
+		return (
+			<div ref={ref} onScroll={onScroll} style={{ overflowY: "auto", height: 250 }}>
+				{virtualItems.map(({ ref, key, item, style }) => (
+					<div ref={ref} key={key} style={style}>
+						item <span style={{ fontSize: 32 }}>{item}</span>
+					</div>
+				))}
+			</div>
+		);
+	}}
+</Playground>

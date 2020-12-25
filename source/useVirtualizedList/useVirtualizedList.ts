@@ -35,7 +35,7 @@ export const useVirtualizedList = <
 	{
 		ResizeObserver = DEFAULT_RESIZE_OBSERVER,
 		containerElementRef: passedContainerElementRef,
-		getItemEstimatedSize = DEFAULT_GET_ITEM_ESTIMATED_SIZE,
+		getItemEstimatedSize: initialGetItemEstimatedSize = DEFAULT_GET_ITEM_ESTIMATED_SIZE,
 		getItemKey = DEFAULT_GET_ITEM_KEY,
 		initialContainerSize = DEFAULT_INITIAL_CONTAINER_SIZE,
 		initialItemEstimatedSize = DEFAULT_INITIAL_ITEM_ESTIMATED_SIZE,
@@ -107,9 +107,12 @@ export const useVirtualizedList = <
 		[]
 	);
 
-	const itemEstimatedSize =
-		replaceNaNWithUndefined(getItemEstimatedSize(itemSizesRef.current.filter(isTypeof("number")))) ??
-		initialItemEstimatedSize;
+	const getItemEstimatedSize = useCallback(
+		() =>
+			replaceNaNWithUndefined(initialGetItemEstimatedSize(itemSizesRef.current.filter(isTypeof("number")))) ??
+			initialItemEstimatedSize,
+		[initialGetItemEstimatedSize, initialItemEstimatedSize]
+	);
 
 	/** Calculate current values. */
 	const calculateCurrentValues = useCallback(() => {
@@ -122,7 +125,7 @@ export const useVirtualizedList = <
 		const newScrollHeight =
 			itemOffsetsRef.current.reduce<number>((previousValue, _, currentIndex) => {
 				const containerCurrentOffset = currentIndex
-					? previousValue + (getItemSize(currentIndex - 1) || itemEstimatedSize)
+					? previousValue + (getItemSize(currentIndex - 1) || getItemEstimatedSize())
 					: 0;
 
 				if (newStartIndex === undefined && containerCurrentOffset > Math.max(0, containerScrollOffset - overscan)) {
@@ -134,7 +137,7 @@ export const useVirtualizedList = <
 
 				setItemOffset(currentIndex, containerCurrentOffset);
 				return containerCurrentOffset;
-			}, 0) + (getItemSize(itemSizesRef.current.length - 1) || itemEstimatedSize);
+			}, 0) + (getItemSize(items.length - 1) || getItemEstimatedSize());
 
 		newStartIndex = Math.max(newStartIndex! ?? 0, 0);
 		newEndIndex = Math.min(newEndIndex! ?? items.length - 1, items.length - 1);
@@ -142,9 +145,9 @@ export const useVirtualizedList = <
 		return { newStartIndex, newEndIndex, newScrollHeight };
 	}, [
 		containerElementRef,
+		getItemEstimatedSize,
 		getItemSize,
 		initialContainerSize,
-		itemEstimatedSize,
 		items.length,
 		overscan,
 		setItemOffset,
@@ -205,9 +208,7 @@ export const useVirtualizedList = <
 
 	const containerProps = {
 		ref: containerElementRef,
-		onScroll: () => {
-			calculateAndUpdateCurrentValues();
-		},
+		onScroll: calculateAndUpdateCurrentValues,
 		style: {
 			overflowY: "auto",
 		},
@@ -243,7 +244,8 @@ export const useVirtualizedList = <
 			style.marginTop = getItemOffset(startIndex);
 		}
 		if (index === endIndex) {
-			style.marginBottom = scrollHeight - (getItemOffset(endIndex) ?? 0) - (getItemSize(endIndex) ?? itemEstimatedSize);
+			style.marginBottom =
+				scrollHeight - (getItemOffset(endIndex) ?? 0) - (getItemSize(endIndex) ?? getItemEstimatedSize());
 		}
 
 		return {

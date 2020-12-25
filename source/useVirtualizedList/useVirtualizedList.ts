@@ -254,8 +254,6 @@ export const useVirtualizedList = <
 			ref,
 			style,
 			key: getItemKey(item, index),
-			offset: getItemOffset(index),
-			size: getItemSize(index),
 		};
 	});
 

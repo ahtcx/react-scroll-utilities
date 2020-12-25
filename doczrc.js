@@ -1,5 +1,5 @@
 export default {
 	themeConfig: {
-		initialColorMode: "light"
+		mode: "dark"
 	}
 };

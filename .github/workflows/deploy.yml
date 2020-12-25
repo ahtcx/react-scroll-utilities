@@ -28,7 +28,7 @@ jobs:
           echo "machine github.com login ${GH_NAME} password ${{ secrets.GITHUB_TOKEN }}" > ~/.netrc
 
           git checkout gh-pages
-          git reset --hard master
+          git reset --hard origin/master
 
           yarn docz build
 

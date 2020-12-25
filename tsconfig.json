@@ -6,5 +6,5 @@
 		"target": "ESNext",
 		"jsx": "react"
 	},
-	"include": ["source", ".storybook"]
+	"include": "source"
 }

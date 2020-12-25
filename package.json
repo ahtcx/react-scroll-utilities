@@ -6,7 +6,7 @@
 	"author": "Alexandre Hitchcox <alexandre@hitchcox.me>",
 	"license": "MIT",
 	"scripts": {
-		"storybook": "start-storybook"
+		"develop": "docz dev"
 	},
 	"devDependencies": {
 		"@types/react": "^17.0.0",

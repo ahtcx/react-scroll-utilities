@@ -14,7 +14,7 @@ module.exports = {
 				alt: "My Site Logo",
 				src: "img/logo.svg",
 			},
-			links: [
+			items: [
 				{
 					to: "documentation/introduction",
 					activeBasePath: "docs",
@@ -29,6 +29,7 @@ module.exports = {
 				},
 			],
 		},
+		footer: {},
 		// footer: {
 		// 	style: "dark",
 		// 	// links: [

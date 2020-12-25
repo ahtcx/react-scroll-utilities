@@ -179,8 +179,7 @@ export const useVirtualizedList = <
 		}
 
 		const handleResizeObserverContainerEntry = (entry: ResizeObserverEntry) => {
-			// calculateAndUpdateCurrentValues();
-			forceUpdate();
+			calculateAndUpdateCurrentValues();
 		};
 
 		const handleResizeObserverItemEntry = (entry: ResizeObserverEntry) => {

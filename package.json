@@ -1,8 +1,8 @@
 {
-	"name": "react-list-utilities",
+	"name": "react-scroll-utilities",
 	"version": "0.0.0",
 	"main": "index.js",
-	"repository": "git@github.com:ahtcx/react-list-utilities.git",
+	"repository": "git@github.com:ahtcx/react-scroll-utilities.git",
 	"author": "Alexandre Hitchcox <alexandre@hitchcox.me>",
 	"license": "MIT",
 	"scripts": {
